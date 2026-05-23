@@ -6,6 +6,8 @@ import {
   scoreArticle,
   type SignalLevel,
 } from "./filterNews";
+import { summarizeArticle } from "../ai/summarize";
+import type { SummaryResult } from "../ai/types";
 
 export type FeedItem = {
   title: string;
@@ -17,6 +19,7 @@ export type FeedItem = {
   signal: SignalLevel;
   /** Debug only — relevance score used for filtering and sorting. */
   relevanceScore: number;
+  intelligence: SummaryResult;
 };
 
 const parser = new Parser({
@@ -88,6 +91,13 @@ export async function fetchFeed(source: NewsSource): Promise<FeedItem[]> {
     // Score gate — discard low-signal articles
     if (score < MIN_SCORE) continue;
 
+    const intelligence = summarizeArticle({
+      title,
+      summary,
+      category,
+      source: source.name,
+    });
+
     items.push({
       title,
       link: item.link ?? item.guid ?? "",
@@ -97,6 +107,7 @@ export async function fetchFeed(source: NewsSource): Promise<FeedItem[]> {
       summary,
       signal,
       relevanceScore: score,
+      intelligence,
     });
   }
 
