@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Radar } from "lucide-react";
+import { Radar, UserCircle2, Zap } from "lucide-react";
 
 export default function Header() {
   return (
@@ -23,10 +23,32 @@ export default function Header() {
             Feed
           </Link>
           <Link
+            href="/workspace"
+            className="text-xs text-zinc-400 hover:text-slate-100 transition-colors"
+          >
+            Workspace
+          </Link>
+          <Link
+            href="/digest"
+            className="flex items-center gap-1 text-xs text-zinc-400 hover:text-cyan-300 transition-colors"
+            title="Daily Digest"
+          >
+            <Zap size={11} className="text-cyan-500" />
+            Digest
+          </Link>
+          <Link
             href="/onboarding"
             className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-500 hover:text-slate-100 transition-colors"
           >
             Interests
+          </Link>
+          <Link
+            href="/settings/profile"
+            className="flex items-center gap-1.5 rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-cyan-500/50 hover:text-cyan-300 transition-colors"
+            title="Analyst Profile"
+          >
+            <UserCircle2 size={13} />
+            Profile
           </Link>
         </nav>
       </div>

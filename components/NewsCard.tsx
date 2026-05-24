@@ -1,9 +1,22 @@
+"use client";
+
 import { ExternalLink, Clock, Lightbulb, ShieldAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import type { SignalLevel } from "@/src/lib/rss/filterNews";
 import type { SummaryResult, RiskLevel } from "@/src/lib/ai/types";
+import type { WorkspaceStatus } from "@/src/lib/supabase/savedArticles";
+import {
+  threatScoreBadgeStyle,
+  getRecommendedAction,
+  type ScoreBreakdown,
+} from "@/src/lib/scoring/threatScore";
+import WhyThisCard from "@/components/WhyThisCard";
+import type { ScoreComponents } from "@/src/lib/recommendation/feedScoring";
 
 export interface NewsItem {
+  /** Supabase UUID — present after the article is persisted to the DB. */
+  id?: string;
   title: string;
   link: string;
   publishedAt: string;
@@ -14,6 +27,16 @@ export interface NewsItem {
   /** Debug — relevance score from scoring pipeline. */
   relevanceScore: number;
   intelligence: SummaryResult;
+  /** Computed threat score (0–105). */
+  threatScore?: number;
+  /** Breakdown of individual score components. */
+  scoreBreakdown?: ScoreBreakdown;
+}
+
+/** Per-field match index ranges from Fuse.js (inclusive [start, end] pairs). */
+export interface MatchHighlights {
+  title?: readonly [number, number][];
+  aiSummary?: readonly [number, number][];
 }
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
@@ -73,21 +96,90 @@ const RISK_LABEL: Record<RiskLevel, string> = {
   low: "Low Risk",
 };
 
+// ─── Highlight renderer ───────────────────────────────────────────────────────
+// Renders plain text with cyan highlights at the given Fuse.js index ranges.
+
+function HighlightedText({
+  text,
+  ranges,
+}: {
+  text: string;
+  ranges?: readonly [number, number][];
+}) {
+  if (!ranges?.length) return <>{text}</>;
+
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+
+  for (const [start, end] of sorted) {
+    if (start > cursor) parts.push(text.slice(cursor, start));
+    parts.push(
+      <mark
+        key={start}
+        className="rounded-[2px] bg-cyan-500/20 text-cyan-200 not-italic"
+      >
+        {text.slice(start, end + 1)}
+      </mark>
+    );
+    cursor = end + 1;
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor));
+
+  return <>{parts}</>;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function NewsCard({ item }: { item: NewsItem }) {
+const workspaceStyles: Record<
+  Exclude<WorkspaceStatus, "ignored">,
+  { badge: string; label: string }
+> = {
+  saved:         { badge: "border border-cyan-500/40 bg-cyan-500/10 text-cyan-300",    label: "SAVED" },
+  investigating: { badge: "border border-amber-500/40 bg-amber-500/10 text-amber-300", label: "INVESTIGATING" },
+  reviewed:      { badge: "border border-emerald-500/40 bg-emerald-500/10 text-emerald-300", label: "REVIEWED" },
+};
+
+export default function NewsCard({
+  item,
+  relevantToYou = false,
+  highlights,
+  workspaceStatus,
+  scoreComponents,
+}: {
+  item: NewsItem;
+  relevantToYou?: boolean;
+  highlights?: MatchHighlights;
+  workspaceStatus?: WorkspaceStatus;
+  scoreComponents?: ScoreComponents;
+}) {
+  const router = useRouter();
   const catStyle = categoryStyles[item.category] ?? "bg-zinc-800 text-zinc-300";
-  const risk = item.intelligence.riskLevel;
+  const risk = item.intelligence.risk_level;
   const { badge: riskBadge, border: riskBorder } = riskStyles[risk];
+  // Hide recommendation badge when workspace status is already displayed to avoid duplicate signals
+  const recommendation = (item.threatScore !== undefined && item.threatScore > 0 && !workspaceStatus)
+    ? getRecommendedAction(item.threatScore)
+    : null;
+
+  const displaySummary = item.intelligence.ai_summary || item.summary;
+
+  function handleCardClick() {
+    if (item.id) {
+      router.push(`/article/${item.id}`);
+    }
+  }
 
   return (
     <article
+      onClick={handleCardClick}
       className={clsx(
         "group flex flex-col gap-4 rounded-xl border bg-zinc-900 p-5 transition-colors hover:border-zinc-600",
+        item.id ? "cursor-pointer" : "",
         riskBorder
       )}
     >
-      {/* ── Row 1: category · risk · signal · link ── */}
+      {/* ── Row 1: category · risk · signal · relevant · link ── */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className={clsx("rounded-md px-2 py-0.5 text-xs font-medium", catStyle)}>
@@ -99,14 +191,104 @@ export default function NewsCard({ item }: { item: NewsItem }) {
           <span className={clsx("rounded-md px-2 py-0.5 text-xs", signalStyles[item.signal])}>
             {item.signal}
           </span>
+          {item.title.startsWith("[TEST]") && (
+            <span className="rounded-md border border-cyan-400/50 bg-cyan-400/10 px-2 py-0.5 text-xs font-semibold tracking-wide text-cyan-300">
+              LIVE TEST
+            </span>
+          )}
+          {relevantToYou && (
+            <span className="rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-xs font-semibold tracking-wide text-violet-300">
+              RELEVANT TO YOU
+            </span>
+          )}
+          {workspaceStatus && workspaceStatus !== "ignored" && (
+            <span
+              className={clsx(
+                "rounded-md px-2 py-0.5 text-xs font-semibold tracking-wide",
+                workspaceStyles[workspaceStatus].badge
+              )}
+            >
+              {workspaceStyles[workspaceStatus].label}
+            </span>
+          )}
+
+          {/* ── Recommended action badge ── */}
+          {recommendation && (
+            <span
+              className={clsx(
+                "flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold",
+                recommendation.badge
+              )}
+              title={`Recommended: ${recommendation.action}`}
+            >
+              <span className={clsx("h-1.5 w-1.5 rounded-full",
+                recommendation.priority === 1 ? "animate-pulse" : "",
+                recommendation.dot
+              )} />
+              {recommendation.shortLabel}
+            </span>
+          )}
         </div>
+
+        {/* ── Threat Score badge ── */}
+        {item.threatScore !== undefined && item.threatScore > 0 && (
+          <div className="group/score relative ml-auto shrink-0">
+            <span
+              className={clsx(
+                "cursor-default rounded-md px-2 py-0.5 text-xs font-semibold tracking-wide",
+                threatScoreBadgeStyle(item.threatScore)
+              )}
+            >
+              THREAT {item.threatScore}
+            </span>
+
+            {/* CSS-only tooltip */}
+            {item.scoreBreakdown && (
+              <div className="invisible absolute right-0 top-full z-30 mt-1.5 w-44 rounded-lg border border-zinc-700 bg-zinc-900 p-3 shadow-xl group-hover/score:visible">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                  Score Breakdown
+                </p>
+                {[
+                  ["Signal",    item.scoreBreakdown.signal,    50],
+                  ["Freshness", item.scoreBreakdown.freshness, 30],
+                  ["Interest",  item.scoreBreakdown.interest,  25],
+                ].map(([label, val, max]) => (
+                  <div key={label as string} className="flex items-center justify-between py-0.5">
+                    <span className="text-xs text-zinc-400">{label as string}</span>
+                    <span className="font-mono text-xs text-slate-200">
+                      {val as number}
+                      <span className="text-zinc-600">/{max}</span>
+                    </span>
+                  </div>
+                ))}
+                <div className="border-t border-zinc-800/60 my-1" />
+                {[
+                  ["Risk",        item.scoreBreakdown.risk],
+                  ["AI Relevance",item.scoreBreakdown.relevance],
+                ].map(([label, val]) => (
+                  <div key={label as string} className="flex items-center justify-between py-0.5">
+                    <span className="text-xs text-zinc-600">{label as string}</span>
+                    <span className="font-mono text-xs text-zinc-600">{val as number}</span>
+                  </div>
+                ))}
+                <div className="mt-2 flex items-center justify-between border-t border-zinc-800 pt-2">
+                  <span className="text-xs font-semibold text-zinc-300">Total</span>
+                  <span className={clsx("font-mono text-xs font-bold", threatScoreBadgeStyle(item.threatScore).split(" ").at(-1))}>
+                    {item.threatScore}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {item.link && (
           <a
             href={item.link}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Open article"
+            aria-label="Open original source"
+            onClick={(e) => e.stopPropagation()}
             className="shrink-0 rounded-md p-1 text-zinc-600 opacity-0 transition-all group-hover:opacity-100 hover:text-slate-100"
           >
             <ExternalLink size={14} />
@@ -116,7 +298,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
 
       {/* ── Title ── */}
       <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-100">
-        {item.title}
+        <HighlightedText text={item.title} ranges={highlights?.title} />
       </h3>
 
       {/* ── AI Summary ── */}
@@ -125,7 +307,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
           AI Summary
         </p>
         <p className="text-sm leading-relaxed text-zinc-300">
-          {item.intelligence.summary}
+          <HighlightedText text={displaySummary} ranges={highlights?.aiSummary} />
         </p>
       </div>
 
@@ -138,7 +320,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
           </span>
         </div>
         <p className="text-xs leading-relaxed text-zinc-400">
-          {item.intelligence.whyItMatters}
+          {item.intelligence.why_it_matters || "Threat relevance still being analyzed."}
         </p>
       </div>
 
@@ -154,13 +336,13 @@ export default function NewsCard({ item }: { item: NewsItem }) {
         <span className="text-xs font-medium text-zinc-500">{item.source}</span>
 
         <div className="flex items-center gap-3">
-          {/* read time */}
-          <span className="flex items-center gap-1 text-xs text-zinc-500">
-            <Clock size={11} />
-            {item.intelligence.readTime}
-          </span>
+          {item.intelligence.readTime && (
+            <span className="flex items-center gap-1 text-xs text-zinc-500">
+              <Clock size={11} />
+              {item.intelligence.readTime}
+            </span>
+          )}
 
-          {/* risk icon */}
           <ShieldAlert
             size={12}
             className={clsx(
@@ -172,18 +354,12 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             )}
           />
 
-          {/* debug score */}
-          <span
-            title="Relevance score (debug)"
-            className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600"
-          >
-            {item.relevanceScore}
-          </span>
-
-          {/* age */}
           <span className="text-xs text-zinc-600">{formatAge(item.publishedAt)}</span>
         </div>
       </div>
+
+      {/* ── Why am I seeing this? ── */}
+      {scoreComponents && <WhyThisCard components={scoreComponents} />}
     </article>
   );
 }

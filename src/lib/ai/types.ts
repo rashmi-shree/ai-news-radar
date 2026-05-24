@@ -1,11 +1,11 @@
-export type RiskLevel = "low" | "medium" | "high";
+export type RiskLevel = "high" | "medium" | "low";
 
 export type SummaryResult = {
-  summary: string;
-  whyItMatters: string;
-  riskLevel: RiskLevel;
+  ai_summary: string;
+  why_it_matters: string;
+  risk_level: RiskLevel;
   humor?: string;
-  readTime: string;
+  readTime?: string;
 };
 
 export type ArticleInput = {

@@ -21,3 +21,61 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* ── Article detail page entrance ────────────────────────────────────────── */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Realtime card entrance animation ────────────────────────────────────── */
+@keyframes slide-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in-down 0.35s ease-out both;
+}
+
+/* ── Toast entrance ───────────────────────────────────────────────────────── */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.2s ease-out both;
+}
+
+/* ── Critical alert ambient pulse ─────────────────────────────────────────── */
+@keyframes pulse-slow {
+  0%, 100% { box-shadow: 0 0 28px -6px rgba(239, 68, 68, 0.30); }
+  50%       { box-shadow: 0 0 40px -4px rgba(239, 68, 68, 0.50); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}

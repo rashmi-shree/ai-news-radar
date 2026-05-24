@@ -6,10 +6,16 @@ import {
   scoreArticle,
   type SignalLevel,
 } from "./filterNews";
-import { summarizeArticle } from "../ai/summarize";
+import { generateFallback } from "../ai/summarize";
 import type { SummaryResult } from "../ai/types";
+import { fetchNvdCves } from "./fetchNvdCves";
+import type { ScoreBreakdown } from "../scoring/threatScore";
+
+export type { ScoreBreakdown };
 
 export type FeedItem = {
+  /** Supabase UUID — only present after the article has been persisted. */
+  id?: string;
   title: string;
   link: string;
   publishedAt: string;
@@ -20,16 +26,30 @@ export type FeedItem = {
   /** Debug only — relevance score used for filtering and sorting. */
   relevanceScore: number;
   intelligence: SummaryResult;
+  /** Computed threat score (0–150). Persisted to DB after ingestion. */
+  threatScore?: number;
+  /** Breakdown of individual score components. */
+  scoreBreakdown?: ScoreBreakdown;
 };
 
+const RSS_TIMEOUT_MS = 3_000;
+
 const parser = new Parser({
-  timeout: 10_000,
+  timeout: RSS_TIMEOUT_MS,
   headers: { "User-Agent": "AI-News-Radar/1.0" },
 });
 
 const LIMIT = 20;
 const MIN_SCORE = 3;
 const SUMMARY_MAX_CHARS = 280;
+
+/** Races a promise against a hard timeout. */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`[timeout] ${label} exceeded ${ms}ms`)), ms)
+  );
+  return Promise.race([promise, timeout]);
+}
 
 const SIGNAL_ORDER: Record<SignalLevel, number> = {
   "High Signal": 0,
@@ -91,7 +111,7 @@ export async function fetchFeed(source: NewsSource): Promise<FeedItem[]> {
     // Score gate — discard low-signal articles
     if (score < MIN_SCORE) continue;
 
-    const intelligence = summarizeArticle({
+    const intelligence = generateFallback({
       title,
       summary,
       category,
@@ -115,19 +135,39 @@ export async function fetchFeed(source: NewsSource): Promise<FeedItem[]> {
 }
 
 export async function fetchAllFeeds(): Promise<FeedItem[]> {
-  const results = await Promise.allSettled(sources.map(fetchFeed));
+  // Run RSS sources and NVD API in parallel; each with its own timeout.
+  const [rssResults, nvdResult] = await Promise.all([
+    Promise.allSettled(
+      sources.map((s) =>
+        withTimeout(fetchFeed(s), RSS_TIMEOUT_MS, s.name)
+      )
+    ),
+    Promise.allSettled([
+      withTimeout(fetchNvdCves(), RSS_TIMEOUT_MS, "NVD API"),
+    ]),
+  ]);
 
   const items: FeedItem[] = [];
 
-  for (const [index, result] of results.entries()) {
+  for (const [index, result] of rssResults.entries()) {
     if (result.status === "rejected") {
       console.error(
-        `[fetchAllFeeds] Failed to fetch "${sources[index].name}" (${sources[index].url}):`,
-        result.reason
+        `[fetchAllFeeds] "${sources[index].name}" failed — continuing silently:`,
+        (result.reason as Error).message
       );
       continue;
     }
     items.push(...result.value);
+  }
+
+  const nvd = nvdResult[0];
+  if (nvd.status === "fulfilled") {
+    items.push(...nvd.value);
+  } else {
+    console.error(
+      "[fetchAllFeeds] NVD API failed — continuing silently:",
+      (nvd.reason as Error).message
+    );
   }
 
   return items.sort(sortItems).slice(0, LIMIT);
