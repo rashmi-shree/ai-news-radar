@@ -121,7 +121,7 @@ export async function fetchNvdCves(): Promise<FeedItem[]> {
     const { category, matched: categoryMatched } = inferCategory(
       title,
       summary,
-      "CVEs"
+      "Security"
     );
 
     const { score, signal } = scoreArticle({
@@ -142,9 +142,10 @@ export async function fetchNvdCves(): Promise<FeedItem[]> {
     items.push({
       title,
       link,
-      publishedAt: new Date(cve.published).toISOString(),
-      source: SOURCE_NAME,
+      publishedAt:    new Date(cve.published).toISOString(),
+      source:         SOURCE_NAME,
       category,
+      sourceType:     "security",
       summary,
       signal,
       relevanceScore: score,

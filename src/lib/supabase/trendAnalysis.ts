@@ -68,7 +68,7 @@ export async function getTrendData(): Promise<PeriodTrend[]> {
   const [articlesRes, investRes] = await Promise.allSettled([
     supabase
       .from("articles")
-      .select("created_at, threat_score")
+      .select("created_at, builder_score")
       .gte("created_at", since),
 
     supabase
@@ -79,7 +79,7 @@ export async function getTrendData(): Promise<PeriodTrend[]> {
       .gte("updated_at", since),
   ]);
 
-  type ArticleRow = { created_at: string; threat_score: number | null };
+  type ArticleRow = { created_at: string; builder_score: number | null };
   type InvestRow  = { article_id: string; updated_at: string };
 
   const articles   = articlesRes.status  === "fulfilled" ? (articlesRes.value.data  as ArticleRow[] ?? []) : [];
@@ -108,9 +108,9 @@ export async function getTrendData(): Promise<PeriodTrend[]> {
     const curNew  = articles.filter((a) => a.created_at >= curStart).length;
     const prevNew = articles.filter((a) => a.created_at >= prevStart && a.created_at < curStart).length;
 
-    // ── Critical threats (score >= 90) ───────────────────────────────────────
-    const curCrit  = articles.filter((a) => a.created_at >= curStart  && (a.threat_score ?? 0) >= 90).length;
-    const prevCrit = articles.filter((a) => a.created_at >= prevStart && a.created_at < curStart && (a.threat_score ?? 0) >= 90).length;
+    // ── Hot items (builder_score >= 90) ─────────────────────────────────────
+    const curCrit  = articles.filter((a) => a.created_at >= curStart  && (a.builder_score ?? 0) >= 90).length;
+    const prevCrit = articles.filter((a) => a.created_at >= prevStart && a.created_at < curStart && (a.builder_score ?? 0) >= 90).length;
 
     // ── Investigations started ───────────────────────────────────────────────
     const curInv  = investigations.filter((i) => i.updated_at >= curStart).length;
@@ -120,9 +120,9 @@ export async function getTrendData(): Promise<PeriodTrend[]> {
       label,
       hours,
       metrics: {
-        newThreats:      buildMetric("New Threats",           curNew,  prevNew,  "bad"),
-        criticalThreats: buildMetric("Critical Threats",      curCrit, prevCrit, "bad"),
-        investigations:  buildMetric("Investigations Started", curInv,  prevInv,  "neutral"),
+        newThreats:      buildMetric("New Items",              curNew,  prevNew,  "bad"),
+        criticalThreats: buildMetric("Hot Items",              curCrit, prevCrit, "bad"),
+        investigations:  buildMetric("Research Started",        curInv,  prevInv,  "neutral"),
       },
     };
   });

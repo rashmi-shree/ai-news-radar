@@ -23,7 +23,6 @@ const HIGH_RISK_KEYWORDS: string[] = [
 ];
 
 const MEDIUM_RISK_KEYWORDS: string[] = [
-  "red team",
   "ai safety",
   "security update",
   "research",

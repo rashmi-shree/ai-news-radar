@@ -23,7 +23,7 @@ export default function SettingsShell({ children }: { children: React.ReactNode 
         {/* ── Settings header ── */}
         <div className="mb-8">
           <h1 className="text-xl font-bold tracking-tight text-slate-100">Settings</h1>
-          <p className="mt-1 text-sm text-zinc-500">Manage your analyst profile and feed preferences.</p>
+           <p className="mt-1 text-sm text-zinc-500">Manage your builder profile and feed preferences.</p>
         </div>
 
         <div className="flex gap-8">

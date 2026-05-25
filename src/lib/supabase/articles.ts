@@ -2,7 +2,9 @@ import { supabase } from "./client";
 import type { FeedItem } from "../rss/fetchFeeds";
 import type { RiskLevel } from "../ai/types";
 import type { SignalLevel } from "../rss/filterNews";
-import { computeThreatScore } from "../scoring/threatScore";
+import type { ResearchBrief } from "../ai/research";
+import { computeBuilderScore } from "../scoring/threatScore";
+import { inferSourceType, type SourceType } from "../rss/sources";
 
 // ─── DB row shape ─────────────────────────────────────────────────────────────
 
@@ -15,18 +17,20 @@ type DbArticle = {
   risk_level: string | null;
   category: string;
   source: string;
+  source_type?: string | null;
   link: string;
   published_at: string;
   signal: string;
   humor: string | null;
   read_time: string | null;
   relevance_score: number;
-  // Phase 6 Step 2 columns — optional until migration runs
-  threat_score?: number | null;
+  builder_score?: number | null;
   freshness_score?: number | null;
-  interest_score?: number | null;
-  risk_score?: number | null;
-  signal_score?: number | null;
+  build_potential_score?: number | null;
+  content_potential_score?: number | null;
+  technical_depth_score?: number | null;
+  virality_score?: number | null;
+  research_brief?: ResearchBrief | null;
   updated_at?: string;
   last_ingested_at?: string;
   created_at?: string;
@@ -40,53 +44,58 @@ function toDbRow(
 ): Record<string, unknown> {
   // Always compute fresh scores so they are guaranteed to be persisted.
   // Re-use a pre-computed breakdown if available; otherwise derive it here.
-  const breakdown = item.scoreBreakdown ?? computeThreatScore(item);
+  const breakdown = item.scoreBreakdown ?? computeBuilderScore(item);
 
   return {
-    title:           item.title,
-    summary:         item.summary,
-    ai_summary:      item.intelligence.ai_summary,
-    why_it_matters:  item.intelligence.why_it_matters,
-    risk_level:      item.intelligence.risk_level,
-    category:        item.category,
-    source:          item.source,
-    link:            item.link,
-    published_at:    item.publishedAt,
-    signal:          item.signal,
-    humor:           item.intelligence.humor ?? null,
-    read_time:       item.intelligence.readTime ?? null,
-    relevance_score: item.relevanceScore,
-    // Scores — always included unconditionally
-    threat_score:    breakdown.total,
-    signal_score:    breakdown.signal,
-    freshness_score: breakdown.freshness,
-    interest_score:  breakdown.interest,
-    risk_score:      breakdown.risk,
-    updated_at:      now,
-    last_ingested_at: now,
+    title:                   item.title,
+    summary:                 item.summary,
+    ai_summary:              item.intelligence.ai_summary,
+    why_it_matters:          item.intelligence.why_it_matters,
+    risk_level:              item.intelligence.risk_level,
+    category:                item.category,
+    source:                  item.source,
+    source_type:             item.sourceType ?? inferSourceType(item.category),
+    link:                    item.link,
+    published_at:            item.publishedAt,
+    signal:                  item.signal,
+    humor:                   item.intelligence.humor ?? null,
+    read_time:               item.intelligence.readTime ?? null,
+    relevance_score:         item.relevanceScore,
+    // Builder score components
+    builder_score:           breakdown.total,
+    virality_score:          breakdown.virality,
+    freshness_score:         breakdown.freshness,
+    build_potential_score:   breakdown.build_potential,
+    content_potential_score: breakdown.content_potential,
+    technical_depth_score:   breakdown.technical_depth,
+    updated_at:              now,
+    last_ingested_at:        now,
   };
 }
 
 function toFeedItem(row: DbArticle): FeedItem {
-  const threatTotal = row.threat_score ?? 0;
+  const builderTotal = row.builder_score ?? 0;
   return {
-    id: row.id,
-    title: row.title,
-    link: row.link,
+    id:         row.id,
+    title:      row.title,
+    link:       row.link,
     publishedAt: row.published_at,
-    source: row.source,
-    category: row.category,
-    summary: row.summary,
-    signal: row.signal as SignalLevel,
+    source:     row.source,
+    sourceType: (row.source_type ?? undefined) as SourceType | undefined,
+    category:   row.category,
+    summary:    row.summary,
+    signal:     row.signal as SignalLevel,
     relevanceScore: row.relevance_score ?? 0,
-    threatScore: threatTotal,
+    builderScore:   builderTotal,
+    researchBrief:  row.research_brief ?? null,
     scoreBreakdown: {
-      risk:      row.risk_score      ?? 0,
-      signal:    row.signal_score    ?? 0,
-      freshness: row.freshness_score ?? 0,
-      interest:  row.interest_score  ?? 0,
-      relevance: row.relevance_score ?? 0,
-      total:     threatTotal,
+      virality:          row.virality_score          ?? 0,
+      freshness:         row.freshness_score         ?? 0,
+      build_potential:   row.build_potential_score   ?? 0,
+      content_potential: row.content_potential_score ?? 0,
+      technical_depth:   row.technical_depth_score   ?? 0,
+      relevance:         row.relevance_score         ?? 0,
+      total:             builderTotal,
     },
     intelligence: {
       ai_summary:     row.ai_summary,
@@ -151,12 +160,7 @@ export async function saveArticles(items: FeedItem[]): Promise<Map<string, strin
     // Log a clear message pointing the developer to the fix.
     if (error.message.includes("column") || error.code === "42703") {
       console.error(
-        "[DB INSERT] Missing score columns — run the migration:\n" +
-        "  ALTER TABLE articles ADD COLUMN IF NOT EXISTS threat_score integer DEFAULT 0;\n" +
-        "  ALTER TABLE articles ADD COLUMN IF NOT EXISTS signal_score integer DEFAULT 0;\n" +
-        "  ALTER TABLE articles ADD COLUMN IF NOT EXISTS freshness_score integer DEFAULT 0;\n" +
-        "  ALTER TABLE articles ADD COLUMN IF NOT EXISTS interest_score integer DEFAULT 0;\n" +
-        "  ALTER TABLE articles ADD COLUMN IF NOT EXISTS risk_score integer DEFAULT 0;"
+        "[DB INSERT] Missing score columns — run migration 003_builder_score.sql"
       );
     }
     throw error;
@@ -171,20 +175,20 @@ export async function saveArticles(items: FeedItem[]): Promise<Map<string, strin
 }
 
 /**
- * Fetches up to 20 articles ordered by threat_score → published_at.
+ * Fetches up to 20 articles ordered by builder_score → published_at.
  * Falls back to relevance_score → published_at when the score migration
- * hasn't been run yet (threat_score column doesn't exist).
+ * hasn't been run yet (builder_score column doesn't exist).
  */
 export async function getArticles(): Promise<FeedItem[]> {
   let { data, error } = await supabase
     .from("articles")
     .select("*")
-    .order("threat_score", { ascending: false })
+    .order("builder_score", { ascending: false })
     .order("published_at", { ascending: false })
     .limit(20);
 
   if (error) {
-    console.warn("[DB] threat_score order failed, falling back:", error.message);
+    console.warn("[DB] builder_score order failed, falling back:", error.message);
     ({ data, error } = await supabase
       .from("articles")
       .select("*")

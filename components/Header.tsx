@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Radar, UserCircle2, Zap } from "lucide-react";
+import { Layers, Radar, UserCircle2, Zap } from "lucide-react";
 
 export default function Header() {
   return (
@@ -29,6 +29,13 @@ export default function Header() {
             Workspace
           </Link>
           <Link
+            href="/collections"
+            className="flex items-center gap-1 text-xs text-zinc-400 hover:text-violet-300 transition-colors"
+          >
+            <Layers size={11} className="text-violet-500" />
+            Collections
+          </Link>
+          <Link
             href="/digest"
             className="flex items-center gap-1 text-xs text-zinc-400 hover:text-cyan-300 transition-colors"
             title="Daily Digest"
@@ -45,7 +52,7 @@ export default function Header() {
           <Link
             href="/settings/profile"
             className="flex items-center gap-1.5 rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-cyan-500/50 hover:text-cyan-300 transition-colors"
-            title="Analyst Profile"
+            title="Builder Profile"
           >
             <UserCircle2 size={13} />
             Profile

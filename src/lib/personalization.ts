@@ -3,48 +3,48 @@ import type { NewsItem } from "@/components/NewsCard";
 // ─── Topic metadata ────────────────────────────────────────────────────────────
 
 export const TOPIC_LABELS: Record<string, string> = {
-  "threat-intelligence": "Threat Intelligence",
-  "cves": "CVEs",
-  "ai-security": "AI Security",
-  "red-team": "Red Team",
-  "blue-team": "Blue Team",
-  "deception-technology": "Deception Technology",
-  "honeypots": "Honeypots",
-  "soc": "SOC",
-  "cloud-security": "Cloud Security",
-  "kubernetes-security": "Kubernetes Security",
+  "openai":          "OpenAI",
+  "anthropic":       "Anthropic",
+  "coding-agents":   "Coding Agents",
+  "mcp":             "MCP",
+  "github-repos":    "GitHub Repos",
+  "research-papers": "Research Papers",
+  "ai-startups":     "AI Startups",
+  "benchmarks":      "Benchmarks",
+  "tools":           "Tools",
+  "security":        "Security",
 };
 
 /** Maps onboarding topic ID → article category string */
 const TOPIC_TO_CATEGORY: Record<string, string> = {
-  "threat-intelligence": "Threat Intelligence",
-  "cves": "CVEs",
-  "ai-security": "AI Security",
-  "red-team": "Red Team",
-  "blue-team": "Blue Team",
-  "deception-technology": "Deception Technology",
-  "honeypots": "Honeypots",
-  "soc": "SOC",
-  "cloud-security": "Cloud Security",
-  "kubernetes-security": "Kubernetes Security",
+  "openai":          "OpenAI",
+  "anthropic":       "Anthropic",
+  "coding-agents":   "Coding Agents",
+  "mcp":             "MCP",
+  "github-repos":    "GitHub Repos",
+  "research-papers": "Research Papers",
+  "ai-startups":     "AI Startups",
+  "benchmarks":      "Benchmarks",
+  "tools":           "Tools",
+  "security":        "Security",
 };
 
 /** Keywords to match against title + summary for each topic */
-const TOPIC_KEYWORDS: Record<string, string[]> = {
-  "threat-intelligence": ["threat", "apt", "malware", "ransomware", "phishing", "campaign", "threat actor", "ioc"],
-  "cves": ["cve", "vulnerability", "exploit", "patch", "nvd", "cvss", "zero day", "0day"],
-  "ai-security": ["ai", "llm", "prompt injection", "jailbreak", "model", "foundation model", "agent attack", "alignment"],
-  "red-team": ["red team", "pentest", "offensive", "adversary simulation", "exploitation", "lateral movement"],
-  "blue-team": ["blue team", "detection", "edr", "xdr", "defend", "detection engineering", "defender"],
-  "deception-technology": ["deception", "honeypot", "decoy", "lure", "canary"],
-  "honeypots": ["honeypot", "honeynet", "decoy", "lure", "canary token"],
-  "soc": ["soc", "siem", "incident response", "alert", "triage", "playbook", "analyst"],
-  "cloud-security": ["cloud", "aws", "azure", "gcp", "eks", "s3", "iam", "cloud security", "misconfig"],
-  "kubernetes-security": ["kubernetes", "k8s", "container", "pod", "eks", "aks", "gke", "container escape"],
+export const TOPIC_KEYWORDS: Record<string, string[]> = {
+  "openai":          ["openai", "gpt-4", "gpt-5", "chatgpt", "o1", "o3", "o4", "sora", "dall-e", "gpt"],
+  "anthropic":       ["anthropic", "claude", "sonnet", "haiku", "opus", "constitutional ai"],
+  "coding-agents":   ["cursor", "copilot", "devin", "coding agent", "ai coding", "aider", "code generation", "autocomplete", "codex"],
+  "mcp":             ["mcp", "model context protocol", "tool use", "function calling", "tool call"],
+  "github-repos":    ["github", "open source", "repository", "open-source", "hugging face", "stars"],
+  "research-papers": ["arxiv", "research paper", "paper", "preprint", "study", "published", "survey", "findings"],
+  "ai-startups":     ["startup", "funding", "series a", "series b", "raised", "valuation", "seed round", "launch"],
+  "benchmarks":      ["benchmark", "eval", "evaluation", "leaderboard", "mmlu", "humaneval", "swe-bench", "lmsys", "elo"],
+  "tools":           ["api", "sdk", "framework", "library", "plugin", "integration", "release", "update", "open source"],
+  "security":        ["security", "vulnerability", "exploit", "jailbreak", "prompt injection", "adversarial", "breach"],
 };
 
 /** Topics where AI-adjacent content earns an extra overlap bonus */
-const AI_OVERLAP_TOPICS = new Set(["ai-security"]);
+const AI_OVERLAP_TOPICS = new Set(["openai", "anthropic", "coding-agents", "research-papers"]);
 
 // ─── Scoring ───────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ export function computePersonalScore(
       score += 2;
     }
 
-    // +1 AI security overlap
+    // +1 AI builder content overlap
     if (
       AI_OVERLAP_TOPICS.has(topic) &&
       (haystack.includes("ai") ||

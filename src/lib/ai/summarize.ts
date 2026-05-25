@@ -118,7 +118,7 @@ export async function summarizeArticle(
     console.error("[HF SUMMARY] Model call failed, using fallback:", (err as Error).message);
     return {
       ai_summary: firstTwoSentences(content),
-      why_it_matters: "Threat relevance still being analyzed.",
+      why_it_matters: "Builder relevance still being analyzed.",
     };
   }
 }

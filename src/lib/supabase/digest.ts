@@ -12,7 +12,7 @@ export interface TopThreat {
   title:          string;
   category:       string;
   source:         string;
-  threatScore:    number;
+  builderScore:   number;
   recommendation: string;
   priority:       1 | 2 | 3 | 4;
 }
@@ -20,19 +20,19 @@ export interface TopThreat {
 export interface OpenInvestigation {
   articleId:    string;
   title:        string;
-  threatScore:  number;
+  builderScore: number;
   ageLabel:     string;
   isCritical:   boolean;
   isStale:      boolean;
 }
 
 export interface RecommendedAction {
-  articleId:   string;
-  title:       string;
-  action:      string;
-  priority:    1 | 2 | 3 | 4;
-  threatScore: number;
-  category:    string;
+  articleId:    string;
+  title:        string;
+  action:       string;
+  priority:     1 | 2 | 3 | 4;
+  builderScore: number;
+  category:     string;
 }
 
 export interface DigestData {
@@ -75,11 +75,11 @@ export async function getDigestData(): Promise<DigestData> {
   const now = Date.now();
 
   const [articlesResult, savedResult] = await Promise.allSettled([
-    // Top articles by threat_score
+    // Top articles by builder_score
     supabase
       .from("articles")
-      .select("id, title, category, source, threat_score")
-      .order("threat_score", { ascending: false })
+      .select("id, title, category, source, builder_score")
+      .order("builder_score", { ascending: false })
       .limit(20),
 
     // All saved_articles for the user
@@ -91,7 +91,7 @@ export async function getDigestData(): Promise<DigestData> {
   ]);
 
   // ── Parse articles ──
-  type ARow = { id: string; title: string; category: string; source: string; threat_score: number | null };
+  type ARow = { id: string; title: string; category: string; source: string; builder_score: number | null };
   const articles: ARow[] =
     articlesResult.status === "fulfilled" && !articlesResult.value.error
       ? ((articlesResult.value.data ?? []) as ARow[])
@@ -115,17 +115,17 @@ export async function getDigestData(): Promise<DigestData> {
   const investigating = saved.filter((r) => r.status === "investigating");
   const savedItems    = saved.filter((r) => r.status === "saved");
 
-  // Get threat scores for saved articles to count criticals
+  // Get builder scores for saved articles to count hot items
   const savedIds = saved.map((r) => r.article_id);
   let criticalCount = 0;
   if (savedIds.length > 0) {
     const { data: savedArticleData } = await supabase
       .from("articles")
-      .select("id, threat_score")
+      .select("id, builder_score")
       .in("id", savedIds);
     const scoreMap = new Map<string, number>(
-      ((savedArticleData ?? []) as { id: string; threat_score: number | null }[])
-        .map((a) => [a.id, a.threat_score ?? 0])
+      ((savedArticleData ?? []) as { id: string; builder_score: number | null }[])
+        .map((a) => [a.id, a.builder_score ?? 0])
     );
     criticalCount = saved.filter((r) =>
       ["saved", "investigating"].includes(r.status) &&
@@ -133,19 +133,19 @@ export async function getDigestData(): Promise<DigestData> {
     ).length;
   }
 
-  // ── Top 5 threats ──
+  // ── Top 5 items ──
   const topThreats: TopThreat[] = articles
-    .filter((a) => (a.threat_score ?? 0) > 0)
+    .filter((a) => (a.builder_score ?? 0) > 0)
     .slice(0, 5)
     .map((a) => {
-      const score = a.threat_score ?? 0;
+      const score = a.builder_score ?? 0;
       const rec   = getRecommendedAction(score);
       return {
         id:             a.id,
         title:          a.title,
         category:       a.category,
         source:         a.source,
-        threatScore:    score,
+        builderScore:   score,
         recommendation: rec.action,
         priority:       rec.priority,
       };
@@ -157,12 +157,12 @@ export async function getDigestData(): Promise<DigestData> {
   if (investIds.length > 0) {
     const { data: investArticles } = await supabase
       .from("articles")
-      .select("id, title, threat_score")
+      .select("id, title, builder_score")
       .in("id", investIds);
 
-    const iMeta = new Map<string, { title: string; threat_score: number }>(
-      ((investArticles ?? []) as { id: string; title: string; threat_score: number | null }[])
-        .map((a) => [a.id, { title: a.title, threat_score: a.threat_score ?? 0 }])
+    const iMeta = new Map<string, { title: string; builder_score: number }>(
+      ((investArticles ?? []) as { id: string; title: string; builder_score: number | null }[])
+        .map((a) => [a.id, { title: a.title, builder_score: a.builder_score ?? 0 }])
     );
 
     const STALE_MS = 3 * 24 * 60 * 60 * 1000;
@@ -172,32 +172,32 @@ export async function getDigestData(): Promise<DigestData> {
         const meta  = iMeta.get(r.article_id)!;
         const ageMs = now - new Date(r.updated_at).getTime();
         return {
-          articleId:   r.article_id,
-          title:       meta.title,
-          threatScore: meta.threat_score,
-          ageLabel:    ageLabel(ageMs),
-          isCritical:  meta.threat_score >= 90,
-          isStale:     ageMs > STALE_MS,
+          articleId:    r.article_id,
+          title:        meta.title,
+          builderScore: meta.builder_score,
+          ageLabel:     ageLabel(ageMs),
+          isCritical:   meta.builder_score >= 90,
+          isStale:      ageMs > STALE_MS,
         };
       })
-      .sort((a, b) => b.threatScore - a.threatScore);
+      .sort((a, b) => b.builderScore - a.builderScore);
   }
 
   // ── Recommended actions (from top articles not yet ignored) ──
   const ignoredIds = new Set(saved.filter((r) => r.status === "ignored").map((r) => r.article_id));
   const recommendedActions: RecommendedAction[] = articles
-    .filter((a) => !ignoredIds.has(a.id) && (a.threat_score ?? 0) > 0)
+    .filter((a) => !ignoredIds.has(a.id) && (a.builder_score ?? 0) > 0)
     .slice(0, 5)
     .map((a) => {
-      const score = a.threat_score ?? 0;
+      const score = a.builder_score ?? 0;
       const rec   = getRecommendedAction(score);
       return {
-        articleId:   a.id,
-        title:       a.title,
-        action:      rec.action,
-        priority:    rec.priority,
-        threatScore: score,
-        category:    a.category,
+        articleId:    a.id,
+        title:        a.title,
+        action:       rec.action,
+        priority:     rec.priority,
+        builderScore: score,
+        category:     a.category,
       };
     });
 

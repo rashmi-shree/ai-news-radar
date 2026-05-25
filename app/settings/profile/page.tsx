@@ -22,64 +22,64 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ROLE_PRESETS = [
-  "Cybersecurity Engineer",
-  "Security Analyst",
-  "Threat Hunter",
-  "Penetration Tester",
-  "SOC Analyst",
-  "Red Team Operator",
-  "Blue Team Engineer",
-  "Security Researcher",
-  "CISO",
-  "DevSecOps Engineer",
+  "AI Engineer",
+  "ML Researcher",
+  "Software Engineer",
+  "Founder",
+  "Product Manager",
+  "Developer Advocate",
+  "AI Safety Researcher",
+  "Startup Founder",
+  "Indie Hacker",
+  "Tech Lead",
 ];
 
 const DOMAIN_PRESETS = [
-  "Deception Technology",
-  "Threat Intelligence",
-  "Vulnerability Research",
-  "Cloud Security",
-  "Network Security",
-  "Application Security",
-  "Identity & Access Management",
-  "Incident Response",
-  "Red Team Operations",
-  "Compliance & GRC",
+  "LLM Applications",
+  "AI Agents",
+  "Model Evaluation",
+  "Open Source AI",
+  "AI Infrastructure",
+  "Multimodal AI",
+  "AI Safety",
+  "Developer Tools",
+  "AI Startups",
+  "Prompt Engineering",
 ];
 
 const TOOL_OPTIONS = [
   "Claude",
   "ChatGPT",
-  "Codex",
   "Gemini",
   "Copilot",
   "Cursor",
   "Perplexity",
-  "CrowdStrike",
-  "Splunk",
-  "Sentinel",
-  "Wiz",
-  "Tenable",
-  "Burp Suite",
-  "Metasploit",
+  "Devin",
+  "Replit",
+  "V0",
+  "Bolt",
+  "Lovable",
+  "Windsurf",
+  "Codeium",
+  "Aider",
 ];
 
 const TOPIC_OPTIONS = [
-  "AI Security",
-  "Prompt Injection",
-  "CVEs",
-  "Threat Intelligence",
-  "Red Team",
-  "Blue Team",
-  "Deception Technology",
-  "Honeypots",
-  "SOC",
-  "Cloud Security",
-  "Kubernetes Security",
-  "Zero Days",
-  "Ransomware",
-  "Supply Chain",
-  "Malware Analysis",
+  "OpenAI",
+  "Anthropic",
+  "Coding Agents",
+  "MCP",
+  "GitHub Repos",
+  "Research Papers",
+  "AI Startups",
+  "Benchmarks",
+  "Tools",
+  "Security",
+  "Multimodal",
+  "Fine-tuning",
+  "RAG",
+  "AI Agents",
+  "Open Source",
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -302,7 +302,7 @@ export default function ProfilePage() {
       {/* ── Page header ── */}
       <div className="mb-7 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-100">Analyst Profile</h2>
+           <h2 className="text-base font-semibold text-slate-100">Builder Profile</h2>
           <p className="mt-0.5 text-xs text-zinc-500">
             Personalise your radar — role, tools, and focus areas.
           </p>
@@ -349,7 +349,7 @@ export default function ProfilePage() {
             <SectionCard
               icon={<Briefcase size={15} />}
               title="Identity"
-              subtitle="Your professional context — helps personalise threat feeds"
+              subtitle="Your professional context — helps personalise your builder feed"
             >
               <div className="grid gap-4 sm:grid-cols-2">
 
@@ -358,7 +358,7 @@ export default function ProfilePage() {
                     <TextInput
                       value={role}
                       onChange={setRole}
-                      placeholder="e.g. Cybersecurity Engineer"
+                      placeholder="e.g. AI Engineer, Indie Hacker, Founder"
                       list={`${listId}-roles`}
                     />
                     <datalist id={`${listId}-roles`}>
@@ -382,7 +382,7 @@ export default function ProfilePage() {
                     <TextInput
                       value={domain}
                       onChange={setDomain}
-                      placeholder="e.g. Deception Technology"
+                      placeholder="e.g. AI Agents"
                       list={`${listId}-domains`}
                     />
                     <datalist id={`${listId}-domains`}>

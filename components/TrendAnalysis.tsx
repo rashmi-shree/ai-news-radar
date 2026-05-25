@@ -33,7 +33,7 @@ function TrendBadge({ metric }: { metric: TrendMetric }) {
   const isDown = direction === "down";
   const isFlat = direction === "flat";
 
-  // Colour logic: for "bad" metrics (threats), up=red down=green
+  // Colour logic: for "bad" metrics (signals), up=red down=green
   //               for "neutral" metrics (investigations), up=amber down=zinc
   const color = isFlat
     ? "text-zinc-600"
@@ -149,7 +149,7 @@ export default function TrendAnalysis() {
       <div className="mb-5 flex items-center gap-2.5">
         <Activity size={14} className="text-zinc-500" />
         <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-          Threat Trends
+          Builder Trends
         </h2>
         <div className="flex-1 border-t border-zinc-800" />
         <span className="text-[10px] text-zinc-700">period-over-period</span>
@@ -158,9 +158,9 @@ export default function TrendAnalysis() {
       {/* Legend */}
       <div className="mb-4 flex flex-wrap gap-4">
         {[
-          { label: "Threats up",          color: "text-red-400",     Icon: TrendingUp   },
-          { label: "Threats down",        color: "text-emerald-400", Icon: TrendingDown },
-          { label: "Investigations up",   color: "text-amber-400",   Icon: TrendingUp   },
+          { label: "Signals up",           color: "text-red-400",     Icon: TrendingUp   },
+          { label: "Signals down",         color: "text-emerald-400", Icon: TrendingDown },
+          { label: "Research up",          color: "text-amber-400",   Icon: TrendingUp   },
         ].map(({ label, color, Icon }) => (
           <span key={label} className={clsx("flex items-center gap-1.5 text-[10px]", color)}>
             <Icon size={10} />

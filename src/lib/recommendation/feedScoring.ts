@@ -5,14 +5,14 @@ import type { NewsItem } from "@/components/NewsCard";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ScoreComponents {
-  threatScore:     number;   // from article's stored threat_score
+  builderScore:    number;   // from article's stored builder_score
   interestScore:   number;   // from onboarding interest matching
   behaviorScore:   number;   // threshold-based behavior boost (may be negative)
-  freshnessBonus:  number;   // recency bonus on top of threat_score's freshness
+  freshnessBonus:  number;   // recency bonus on top of builder_score's freshness
   finalScore:      number;   // sum — the ranking key
-  /** Display labels of interests that matched this article (e.g. "AI Security"). */
+  /** Display labels of interests that matched this article (e.g. "Coding Agents"). */
   matchedTopics:   string[];
-  /** Human-readable reasons for the behavior boost (e.g. "Investigated AI Security (+15)"). */
+  /** Human-readable reasons for the behavior boost (e.g. "Researched Coding Agents (+15)"). */
   behaviorReasons: string[];
 }
 
@@ -67,7 +67,7 @@ function computeFreshnessBonus(publishedAt: string): number {
 
 interface CategoryBoost {
   boost:   number;
-  reasons: string[];   // already formatted, e.g. "Investigated AI Security (+15)"
+  reasons: string[];   // already formatted, e.g. "Researched Coding Agents (+15)"
 }
 
 /**
@@ -112,16 +112,16 @@ function scoreArticle(
   interests: string[],
   detailedBoostMap: Map<string, CategoryBoost>
 ): ScoreComponents {
-  const threatScore    = article.threatScore ?? 0;
+  const builderScore   = article.builderScore ?? 0;
   const interestScore  = computePersonalScore(article, interests);
   const catBoost       = detailedBoostMap.get(article.category) ?? { boost: 0, reasons: [] };
   const behaviorScore  = catBoost.boost;
   const freshnessBonus = computeFreshnessBonus(article.publishedAt);
-  const finalScore     = threatScore + interestScore + behaviorScore + freshnessBonus;
+  const finalScore     = builderScore + interestScore + behaviorScore + freshnessBonus;
   const matchedTopics  = getMatchedInterestTopics(article, interests);
 
   return {
-    threatScore,
+    builderScore,
     interestScore,
     behaviorScore,
     freshnessBonus,
@@ -143,7 +143,7 @@ export interface FeedScoringResult {
 /**
  * Scores all articles and returns them sorted by final_score DESC.
  *
- * final_score = threat_score + interest_score + behavior_score + freshness_bonus
+ * final_score = builder_score + interest_score + behavior_score + freshness_bonus
  */
 export function scoreFeed(
   articles: NewsItem[],

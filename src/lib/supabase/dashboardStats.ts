@@ -6,8 +6,8 @@ const USER_ID = "local-user";
 
 export interface DashboardStats {
   totalThreats:       number;   // all articles ingested
-  criticalThreats:    number;   // articles with threat_score >= 90
-  avgThreatScore:     number;   // mean threat_score across all scored articles
+  criticalThreats:    number;   // articles with builder_score >= 90 (hot)
+  avgThreatScore:     number;   // mean builder_score across all scored articles
   openInvestigations: number;   // user saved_articles where status = investigating (deduped)
   reviewedToday:      number;   // user saved_articles where status = reviewed AND updated_at = today (deduped)
   savedItems:         number;   // user saved_articles where status = saved (deduped)
@@ -32,18 +32,18 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .from("articles")
       .select("id", { count: "exact", head: true }),
 
-    // 2. Critical articles (score >= 90)
+    // 2. Hot articles (builder_score >= 90)
     supabase
       .from("articles")
       .select("id", { count: "exact", head: true })
-      .gte("threat_score", 90),
+      .gte("builder_score", 90),
 
-    // 3. All threat scores for average calculation
+    // 3. All builder scores for average calculation
     supabase
       .from("articles")
-      .select("threat_score")
-      .not("threat_score", "is", null)
-      .gt("threat_score", 0),
+      .select("builder_score")
+      .not("builder_score", "is", null)
+      .gt("builder_score", 0),
 
     // 4. User's saved_articles for per-status counts
     supabase
@@ -64,8 +64,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   // ── 3. Average threat score ───────────────────────────────────────────────
   let avgThreatScore = 0;
   if (scoresRes.status === "fulfilled" && scoresRes.value.data?.length) {
-    const scores = (scoresRes.value.data as { threat_score: number }[]).map(
-      (r) => r.threat_score
+    const scores = (scoresRes.value.data as { builder_score: number }[]).map(
+      (r) => r.builder_score
     );
     avgThreatScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
   }

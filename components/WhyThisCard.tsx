@@ -8,7 +8,7 @@ import {
   ChevronUp,
   HelpCircle,
   Lightbulb,
-  ShieldAlert,
+  Hammer,
   Tag,
   Zap,
 } from "lucide-react";
@@ -69,7 +69,7 @@ export default function WhyThisCard({ components }: Props) {
   const [open, setOpen] = useState(false);
 
   const {
-    threatScore,
+    builderScore,
     interestScore,
     behaviorScore,
     freshnessBonus,
@@ -114,12 +114,12 @@ export default function WhyThisCard({ components }: Props) {
           {/* Score rows */}
           <div className="space-y-3 px-4 py-3">
 
-            {/* Threat score */}
+            {/* Builder score */}
             <ScoreRow
-              icon={<ShieldAlert size={13} />}
-              label="Threat score"
-              value={threatScore}
-              accent="text-orange-400"
+              icon={<Hammer size={13} />}
+              label="Build score"
+              value={builderScore}
+              accent="text-amber-400"
             />
 
             {/* Interest match */}
@@ -180,9 +180,9 @@ export default function WhyThisCard({ components }: Props) {
                 <span className="text-xs font-semibold text-slate-300">Final score</span>
                 <span className={clsx(
                   "font-mono text-sm font-bold",
-                  finalScore >= 90 ? "text-red-400"
-                  : finalScore >= 60 ? "text-orange-400"
-                  : finalScore >= 30 ? "text-yellow-400"
+                  finalScore >= 90 ? "text-rose-400"
+                  : finalScore >= 70 ? "text-amber-400"
+                  : finalScore >= 40 ? "text-cyan-400"
                   : "text-zinc-400"
                 )}>
                   {finalScore}
@@ -194,9 +194,9 @@ export default function WhyThisCard({ components }: Props) {
                 <div
                   className={clsx(
                     "h-full rounded-full transition-all",
-                    finalScore >= 90 ? "bg-red-500"
-                    : finalScore >= 60 ? "bg-orange-500"
-                    : finalScore >= 30 ? "bg-yellow-500"
+                    finalScore >= 90 ? "bg-rose-500"
+                    : finalScore >= 70 ? "bg-amber-500"
+                    : finalScore >= 40 ? "bg-cyan-500"
                     : "bg-zinc-600"
                   )}
                   style={{ width: `${Math.min((finalScore / 130) * 100, 100)}%` }}
@@ -205,7 +205,7 @@ export default function WhyThisCard({ components }: Props) {
 
               {/* Breakdown formula */}
               <p className="mt-2 font-mono text-[9px] text-zinc-700">
-                {threatScore} threat
+                {builderScore} build
                 {interestScore !== 0 && ` + ${interestScore} interest`}
                 {behaviorScore !== 0 && ` ${behaviorScore > 0 ? "+" : ""}${behaviorScore} behavior`}
                 {freshnessBonus !== 0 && ` + ${freshnessBonus} fresh`}
@@ -217,7 +217,7 @@ export default function WhyThisCard({ components }: Props) {
             {/* No signal notice */}
             {!hasSignal && (
               <p className="text-[10px] text-zinc-700">
-                Ranked by threat score only — interact with articles to personalise this further.
+                Ranked by build score only — interact with articles to personalise this further.
               </p>
             )}
           </div>

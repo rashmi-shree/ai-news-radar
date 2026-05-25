@@ -174,7 +174,7 @@ function HeatGrid({ data }: { data: HeatmapData }) {
           <p className="mt-0.5 font-mono text-sm font-bold text-slate-200">
             {tooltip.count}{" "}
             <span className="font-normal text-zinc-500">
-              threat{tooltip.count !== 1 ? "s" : ""}
+              signal{tooltip.count !== 1 ? "s" : ""}
             </span>
           </p>
         </div>
@@ -199,7 +199,7 @@ function IntensityLegend({ maxCount }: { maxCount: number }) {
               key={i}
               className="h-3 w-6 rounded-sm"
               style={{ background: `rgba(34, 211, 238, ${opacity})` }}
-              title={`${Math.round(frac * maxCount)} threats`}
+              title={`${Math.round(frac * maxCount)} signals`}
             />
           );
         })}
@@ -250,7 +250,7 @@ export default function HeatmapWidget() {
       <div className="mb-5 flex items-center gap-2.5">
         <Grid2x2 size={14} className="text-zinc-500" />
         <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-          Threat Heatmap
+          Activity Heatmap
         </h2>
         <div className="flex-1 border-t border-zinc-800" />
         <span className="text-[10px] text-zinc-700">category × risk level</span>
@@ -261,7 +261,7 @@ export default function HeatmapWidget() {
         <div className="mb-5 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-              Threat Density
+              Signal Density
             </p>
             <p className="mt-0.5 text-[10px] text-zinc-700">
               articles per category-risk intersection

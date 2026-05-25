@@ -64,7 +64,7 @@ const STATUS_CFG: Record<
   }
 > = {
   investigating: {
-    label:       "Investigating",
+    label:       "Researching",
     Icon:        SearchCode,
     color:       "text-amber-400",
     headerBorder:"border-amber-500/30",
@@ -73,7 +73,7 @@ const STATUS_CFG: Record<
     summaryCard: "border border-amber-500/20 bg-amber-500/5",
   },
   saved: {
-    label:       "Saved",
+    label:       "Watching",
     Icon:        Bookmark,
     color:       "text-cyan-400",
     headerBorder:"border-cyan-500/30",
@@ -82,7 +82,7 @@ const STATUS_CFG: Record<
     summaryCard: "border border-cyan-500/20 bg-cyan-500/5",
   },
   reviewed: {
-    label:       "Reviewed",
+    label:       "Built",
     Icon:        CheckCircle2,
     color:       "text-emerald-400",
     headerBorder:"border-emerald-500/30",
@@ -91,7 +91,7 @@ const STATUS_CFG: Record<
     summaryCard: "border border-emerald-500/20 bg-emerald-500/5",
   },
   ignored: {
-    label:       "Ignored",
+    label:       "Ignore",
     Icon:        EyeOff,
     color:       "text-zinc-500",
     headerBorder:"border-zinc-700",
@@ -103,7 +103,7 @@ const STATUS_CFG: Record<
 
 // ─── Workspace filters ────────────────────────────────────────────────────────
 
-type FilterKey = "all" | "critical" | "high-risk" | "ai-security" | "threat-intel" | "cves";
+type FilterKey = "all" | "critical" | "high-opportunity" | "coding-agents" | "research" | "benchmarks";
 
 interface FilterDef {
   key:     FilterKey;
@@ -112,12 +112,12 @@ interface FilterDef {
 }
 
 const FILTERS: FilterDef[] = [
-  { key: "all",          label: "All",          match: () => true },
-  { key: "critical",     label: "Critical",     match: (i) => (i.article.threatScore ?? 0) >= 90 },
-  { key: "high-risk",    label: "High Risk",    match: (i) => i.article.intelligence?.risk_level === "high" },
-  { key: "ai-security",  label: "AI Security",  match: (i) => i.article.category === "AI Security" },
-  { key: "threat-intel", label: "Threat Intel", match: (i) => i.article.category === "Threat Intelligence" },
-  { key: "cves",         label: "CVEs",         match: (i) => i.article.category === "CVEs" },
+  { key: "all",              label: "All",             match: () => true },
+  { key: "critical",         label: "Hot",             match: (i) => (i.article.builderScore ?? 0) >= 90 },
+  { key: "high-opportunity", label: "High Opportunity", match: (i) => i.article.intelligence?.risk_level === "high" },
+  { key: "coding-agents",    label: "Coding Agents",   match: (i) => i.article.category === "Coding Agents" },
+  { key: "research",         label: "Research Papers", match: (i) => i.article.category === "Research Papers" },
+  { key: "benchmarks",       label: "Benchmarks",      match: (i) => i.article.category === "Benchmarks" },
 ];
 
 function FilterBar({
@@ -145,13 +145,13 @@ function FilterBar({
               isActive
                 ? f.key === "critical"
                   ? "border-red-500/50 bg-red-500/15 text-red-300 shadow-[0_0_12px_-4px_rgba(239,68,68,0.4)]"
-                  : f.key === "high-risk"
+                  : f.key === "high-opportunity"
                   ? "border-orange-500/50 bg-orange-500/15 text-orange-300"
-                  : f.key === "ai-security"
+                  : f.key === "coding-agents"
                   ? "border-violet-500/50 bg-violet-500/15 text-violet-300"
-                  : f.key === "threat-intel"
+                  : f.key === "research"
                   ? "border-amber-500/50 bg-amber-500/15 text-amber-300"
-                  : f.key === "cves"
+                  : f.key === "benchmarks"
                   ? "border-rose-500/50 bg-rose-500/15 text-rose-300"
                   : "border-cyan-500/50 bg-cyan-500/15 text-cyan-300"
                 : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
@@ -402,12 +402,12 @@ function CriticalAlertBanner({ count }: { count: number }) {
       {/* Text */}
       <div className="flex-1 min-w-0">
         <p className="text-xs font-bold uppercase tracking-widest text-red-400">
-          Critical Threats Need Review
+          High-Signal Items Need Review
         </p>
         <p className="mt-0.5 text-sm text-slate-200">
           <span className="font-mono font-bold text-red-300">{count}</span>
-          {" "}critical threat{count !== 1 ? "s" : ""} awaiting review
-          <span className="ml-2 text-xs text-zinc-500">(threat score ≥ 90)</span>
+          {" "}high-signal item{count !== 1 ? "s" : ""} awaiting review
+          <span className="ml-2 text-xs text-zinc-500">(build score ≥ 90)</span>
         </p>
       </div>
 
@@ -433,7 +433,7 @@ function MetricsBar({
 }) {
   const metrics: MetricCardProps[] = [
     {
-      label:       "Threats Tracked",
+      label:       "Signals Tracked",
       sublabel:    "all statuses",
       value:       total,
       Icon:        Shield,
@@ -445,8 +445,8 @@ function MetricsBar({
       featured:    true,
     },
     {
-      label:       "Investigating",
-      sublabel:    "active analysis",
+      label:       "Researching",
+      sublabel:    "active research",
       value:       investigating,
       Icon:        SearchCode,
       iconColor:   "text-amber-400",
@@ -456,8 +456,8 @@ function MetricsBar({
       bgGradient:  "bg-gradient-to-br from-amber-950/20 via-zinc-900 to-zinc-900",
     },
     {
-      label:       "Reviewed",
-      sublabel:    "closed threats",
+      label:       "Built",
+      sublabel:    "completed builds",
       value:       reviewed,
       Icon:        CheckCircle2,
       iconColor:   "text-emerald-400",
@@ -467,7 +467,7 @@ function MetricsBar({
       bgGradient:  "bg-gradient-to-br from-emerald-950/20 via-zinc-900 to-zinc-900",
     },
     {
-      label:       "Saved",
+      label:       "Watching",
       sublabel:    "watchlist items",
       value:       saved,
       Icon:        Bookmark,
@@ -495,21 +495,21 @@ const ACTIVITY_CFG: Record<
   { label: string; Icon: React.ElementType; color: string; dot: string; bg: string }
 > = {
   investigating: {
-    label: "Investigating",
+    label: "Researching",
     Icon:  SearchCode,
     color: "text-amber-400",
     dot:   "bg-amber-400",
     bg:    "bg-amber-500/10",
   },
   saved: {
-    label: "Saved",
+    label: "Watching",
     Icon:  Bookmark,
     color: "text-cyan-400",
     dot:   "bg-cyan-400",
     bg:    "bg-cyan-500/10",
   },
   reviewed: {
-    label: "Reviewed",
+    label: "Built",
     Icon:  CheckCircle2,
     color: "text-emerald-400",
     dot:   "bg-emerald-400",
@@ -714,11 +714,11 @@ export default function WorkspacePage() {
 
   const total = counts.investigating + counts.saved + counts.reviewed + counts.ignored;
 
-  // Articles with status investigating/saved AND threat score ≥ 90
+  // Articles with status investigating/saved AND builder score ≥ 90 (hot)
   const criticalCount = items.filter(
     (i) =>
       (i.status === "investigating" || i.status === "saved") &&
-      (i.article.threatScore ?? 0) >= 90
+      (i.article.builderScore ?? 0) >= 90
   ).length;
 
   // Apply active filter — resets to "all" view when filter yields nothing
@@ -739,7 +739,7 @@ export default function WorkspacePage() {
     <div className="flex min-h-screen flex-col bg-zinc-950">
       <Header />
 
-      {/* SOC accent bar */}
+      {/* Builder accent bar */}
       <div className="h-px w-full bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
 
       <main className="animate-page-enter mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
@@ -770,10 +770,10 @@ export default function WorkspacePage() {
         {/* ── Page title ── */}
         <div className="mb-2 flex items-center gap-3">
           <Zap size={18} className="text-amber-400" />
-          <h1 className="text-2xl font-bold text-slate-100">Analyst Workspace</h1>
+          <h1 className="text-2xl font-bold text-slate-100">Builder Workspace</h1>
         </div>
         <p className="mb-8 text-sm text-zinc-500">
-          Your tracked threat intelligence
+          Your tracked builder intelligence
           {total > 0 && (
             <span className="ml-1 font-mono text-zinc-400">· {total} article{total !== 1 ? "s" : ""}</span>
           )}
@@ -785,13 +785,13 @@ export default function WorkspacePage() {
         {/* ── Analytics charts ── */}
         <AnalyticsCharts />
 
-        {/* ── Threat heatmap ── */}
+        {/* ── Activity heatmap ── */}
         <HeatmapWidget />
 
-        {/* ── Threat trend analysis ── */}
+        {/* ── Builder trend analysis ── */}
         <TrendAnalysis />
 
-        {/* ── Analyst workload ── */}
+        {/* ── Builder workload ── */}
         <WorkloadPanel />
 
         {/* ── Critical alert banner ── */}
@@ -825,7 +825,7 @@ export default function WorkspacePage() {
             <div>
               <p className="text-sm font-semibold text-zinc-300">No articles in workspace</p>
               <p className="mt-1 text-xs text-zinc-600">
-                Open any article and use Threat Actions to save, investigate, or mark it reviewed.
+                Open any article and use Actions to watch, research, or mark it built.
               </p>
             </div>
             <Link

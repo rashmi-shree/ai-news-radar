@@ -8,12 +8,12 @@ const STALE_DAYS = 3;
 export interface InvestigationItem {
   articleId:    string;
   articleTitle: string;
-  threatScore:  number;
+  builderScore: number;
   startedAt:    string;  // updated_at of the saved_articles row (when investigating began)
   ageMs:        number;  // ms since startedAt
   ageLabel:     string;  // human-readable: "2h", "3d 4h"
   isStale:      boolean; // age > STALE_DAYS
-  isCritical:   boolean; // threatScore >= 90
+  isCritical:   boolean; // builderScore >= 90
 }
 
 export interface WorkloadData {
@@ -73,12 +73,12 @@ export async function getWorkloadData(): Promise<WorkloadData> {
   const articleIds = deduped.map((r) => r.article_id);
   const { data: articles } = await supabase
     .from("articles")
-    .select("id, title, threat_score")
+    .select("id, title, builder_score")
     .in("id", articleIds);
 
-  const meta = new Map<string, { title: string; threat_score: number }>();
-  for (const a of (articles ?? []) as { id: string; title: string; threat_score: number | null }[]) {
-    meta.set(a.id, { title: a.title, threat_score: a.threat_score ?? 0 });
+  const meta = new Map<string, { title: string; builder_score: number }>();
+  for (const a of (articles ?? []) as { id: string; title: string; builder_score: number | null }[]) {
+    meta.set(a.id, { title: a.title, builder_score: a.builder_score ?? 0 });
   }
 
   // 3. Build items
@@ -88,17 +88,17 @@ export async function getWorkloadData(): Promise<WorkloadData> {
   const items: InvestigationItem[] = deduped
     .filter((r) => meta.has(r.article_id))
     .map((r) => {
-      const { title, threat_score } = meta.get(r.article_id)!;
+      const { title, builder_score } = meta.get(r.article_id)!;
       const ageMs = now - new Date(r.updated_at).getTime();
       return {
         articleId:    r.article_id,
         articleTitle: title,
-        threatScore:  threat_score,
+        builderScore: builder_score,
         startedAt:    r.updated_at,
         ageMs,
         ageLabel:     ageLabel(ageMs),
         isStale:      ageMs > STALE_MS,
-        isCritical:   threat_score >= 90,
+        isCritical:   builder_score >= 90,
       };
     });
 

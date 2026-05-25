@@ -3,65 +3,82 @@ import type { RiskLevel } from "../ai/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export type BuilderVerdict = "hot" | "rising" | "watch" | "normal";
+
 export interface ScoreBreakdown {
-  signal:    number; // 10 | 20 | 35 | 50  — contributes to total
-  freshness: number; // 5 | 10 | 20 | 30   — contributes to total
-  interest:  number; // 5 | 15 | 20 | 25   — contributes to total
+  virality:          number; // 10 | 20 | 35 | 50  — in formula
+  freshness:         number; // 5  | 10 | 20 | 30  — in formula
+  build_potential:   number; // 5  | 10 | 15 | 20 | 25 — in formula
+  content_potential: number; // 5  | 10 | 15 | 20  — in formula
   // Stored & displayed but NOT added to total
-  risk:      number; // 10 | 20 | 40
-  relevance: number; // raw relevanceScore (capped at 30)
-  total:     number; // signal + freshness + interest (max 105)
+  technical_depth:   number; // 10 | 20 | 40
+  relevance:         number; // raw relevanceScore (capped at 30)
+  total:             number; // virality + freshness + build_potential + content_potential (max 125)
 }
 
-// ─── Signal score ─────────────────────────────────────────────────────────────
-// Maps our 3-level signal field + risk_level to a 4-tier score.
-//   critical (50) = "High Signal" article that is also high-risk or a CVE
-//   high     (35) = "High Signal"
-//   medium   (20) = "Relevant"
-//   low      (10) = "General"
+// ─── Virality score ───────────────────────────────────────────────────────────
+// Measures how widely discussed / shared this item is likely to be.
+//   trending (50) = High Signal with strong engagement or breakout category
+//   notable  (35) = High Signal
+//   relevant (20) = Relevant
+//   low      (10) = General
 
-export function signalScore(
+export function viralityScore(
   signal: SignalLevel | string,
   riskLevel: RiskLevel | string = "low",
   category = ""
 ): number {
-  if (signal === "High Signal" && (riskLevel === "high" || category === "CVEs")) return 50;
+  if (signal === "High Signal" && (riskLevel === "high" || category === "Security" || category === "Research Papers")) return 50;
   if (signal === "High Signal") return 35;
   if (signal === "Relevant")    return 20;
   return 10;
 }
 
 // ─── Freshness score ──────────────────────────────────────────────────────────
-// Finer-grained than before: rewards articles less than 6 hours old heavily.
 
 export function freshnessScore(publishedAt: string): number {
-  const ageMs  = Date.now() - new Date(publishedAt).getTime();
-  const ageH   = ageMs / (1000 * 60 * 60);
-
+  const ageH = (Date.now() - new Date(publishedAt).getTime()) / (1000 * 60 * 60);
   if (ageH < 6)  return 30;
   if (ageH < 24) return 20;
   if (ageH < 72) return 10;
   return 5;
 }
 
-// ─── Interest score ───────────────────────────────────────────────────────────
-// Fixed category-based map — no per-user interest matching needed.
-// Reflects which categories carry the most operational value.
+// ─── Build potential ──────────────────────────────────────────────────────────
+// How actionable / buildable is the content for an AI builder?
 
-const CATEGORY_INTEREST: Record<string, number> = {
-  "CVEs":                25,
-  "AI Security":         20,
-  "Threat Intelligence": 20,
-  "Red Team":            15,
+const CATEGORY_BUILD_POTENTIAL: Record<string, number> = {
+  "Coding Agents":  25,
+  "MCP":            25,
+  "Benchmarks":     25,
+  "Research Papers": 20,
+  "GitHub Repos":   20,
+  "Tools":          20,
+  "OpenAI":         15,
+  "Anthropic":      15,
+  "AI Startups":    10,
+  "Security":       10,
 };
 
-export function interestScore(category: string): number {
-  return CATEGORY_INTEREST[category] ?? 5;
+export function buildPotentialScore(category: string): number {
+  return CATEGORY_BUILD_POTENTIAL[category] ?? 5;
 }
 
-// ─── Risk score (stored, not summed into threat_score) ────────────────────────
+// ─── Content potential ────────────────────────────────────────────────────────
+// Derived from keyword relevance — higher relevance score = richer content signal.
 
-export function riskScore(level: RiskLevel | string): number {
+export function contentPotentialScore(relevanceScore: number): number {
+  const capped = Math.min(relevanceScore, 30);
+  if (capped >= 20) return 20;
+  if (capped >= 12) return 15;
+  if (capped >= 6)  return 10;
+  return 5;
+}
+
+// ─── Technical depth (stored, not summed) ─────────────────────────────────────
+// Proxy for how technical / in-depth the content is.
+
+export function technicalDepthScore(level: RiskLevel | string): number {
   if (level === "high")   return 40;
   if (level === "medium") return 20;
   return 10;
@@ -79,28 +96,43 @@ export interface ArticleInput {
   intelligence:   { risk_level: RiskLevel | string };
 }
 
-export function computeThreatScore(article: ArticleInput): ScoreBreakdown {
-  const risk      = riskScore(article.intelligence.risk_level);
-  const signal    = signalScore(article.signal, article.intelligence.risk_level, article.category);
-  const freshness = freshnessScore(article.publishedAt);
-  const interest  = interestScore(article.category);
-  const relevance = Math.min(article.relevanceScore, 30);
+export function computeBuilderScore(article: ArticleInput): ScoreBreakdown {
+  const virality          = viralityScore(article.signal, article.intelligence.risk_level, article.category);
+  const freshness         = freshnessScore(article.publishedAt);
+  const build_potential   = buildPotentialScore(article.category);
+  const content_potential = contentPotentialScore(article.relevanceScore);
+  const technical_depth   = technicalDepthScore(article.intelligence.risk_level);
+  const relevance         = Math.min(article.relevanceScore, 30);
 
-  // threat_score = signal + freshness + interest  (max 105)
-  // risk and relevance are stored separately but don't inflate the headline score.
-  const total = signal + freshness + interest;
-  return { signal, freshness, interest, risk, relevance, total };
+  // builder_score = virality + freshness + build_potential + content_potential (max 125)
+  const total = virality + freshness + build_potential + content_potential;
+  return { virality, freshness, build_potential, content_potential, technical_depth, relevance, total };
+}
+
+/** @deprecated Use computeBuilderScore */
+export const computeThreatScore = computeBuilderScore;
+
+// ─── Verdict ──────────────────────────────────────────────────────────────────
+
+export function builderVerdict(score: number): BuilderVerdict {
+  if (score >= 90) return "hot";
+  if (score >= 70) return "rising";
+  if (score >= 40) return "watch";
+  return "normal";
 }
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
-// Thresholds re-calibrated for max score of 105.
 
-export function threatScoreBadgeStyle(score: number): string {
-  if (score >= 90) return "border border-red-500/50 bg-red-500/10 text-red-400";
-  if (score >= 60) return "border border-orange-500/50 bg-orange-500/10 text-orange-400";
-  if (score >= 30) return "border border-yellow-500/50 bg-yellow-500/10 text-yellow-400";
+export function builderScoreBadgeStyle(score: number): string {
+  const v = builderVerdict(score);
+  if (v === "hot")    return "border border-rose-500/60 bg-rose-500/15 text-rose-300";
+  if (v === "rising") return "border border-amber-500/60 bg-amber-500/15 text-amber-300";
+  if (v === "watch")  return "border border-cyan-500/60 bg-cyan-500/15 text-cyan-300";
   return "border border-zinc-700 bg-zinc-800/60 text-zinc-500";
 }
+
+/** @deprecated Use builderScoreBadgeStyle */
+export const threatScoreBadgeStyle = builderScoreBadgeStyle;
 
 export function signalTier(score: number): string {
   if (score >= 50) return "CRITICAL";
@@ -111,126 +143,131 @@ export function signalTier(score: number): string {
 
 // ─── Recommended action ───────────────────────────────────────────────────────
 
-export type RecommendedAction = "Investigate Now" | "Monitor" | "Review Later" | "Archive";
+export type RecommendedAction = "Build on This" | "Worth a Look" | "Keep an Eye" | "Low Signal";
 
 export interface ActionRecommendation {
-  action:    RecommendedAction;
-  shortLabel: string;           // compact form for badge
-  badge:     string;            // Tailwind classes for the badge element
-  dot:       string;            // colour of the indicator dot
-  priority:  1 | 2 | 3 | 4;    // 1 = most urgent
+  action:     RecommendedAction;
+  shortLabel: string;
+  badge:      string;
+  dot:        string;
+  priority:   1 | 2 | 3 | 4;
 }
 
 export function getRecommendedAction(score: number): ActionRecommendation {
   if (score >= 90) return {
-    action:     "Investigate Now",
-    shortLabel: "Investigate",
-    badge:      "border border-red-500/50 bg-red-500/10 text-red-300",
-    dot:        "bg-red-500",
+    action:     "Build on This",
+    shortLabel: "Build on This",
+    badge:      "border border-rose-500/50 bg-rose-500/10 text-rose-300",
+    dot:        "bg-rose-500",
     priority:   1,
   };
   if (score > 70) return {
-    action:     "Monitor",
-    shortLabel: "Monitor",
+    action:     "Worth a Look",
+    shortLabel: "Worth a Look",
     badge:      "border border-amber-500/40 bg-amber-500/10 text-amber-300",
     dot:        "bg-amber-400",
     priority:   2,
   };
   if (score > 40) return {
-    action:     "Review Later",
-    shortLabel: "Review Later",
-    badge:      "border border-yellow-500/30 bg-yellow-500/8 text-yellow-400",
-    dot:        "bg-yellow-500",
+    action:     "Keep an Eye",
+    shortLabel: "Keep an Eye",
+    badge:      "border border-cyan-500/30 bg-cyan-500/8 text-cyan-400",
+    dot:        "bg-cyan-500",
     priority:   3,
   };
   return {
-    action:     "Archive",
-    shortLabel: "Archive",
+    action:     "Low Signal",
+    shortLabel: "Low Signal",
     badge:      "border border-zinc-700 bg-zinc-800/60 text-zinc-500",
     dot:        "bg-zinc-600",
     priority:   4,
   };
 }
 
-// ─── Score explanation generator ──────────────────────────────────────────────
+// ─── Score explanation ────────────────────────────────────────────────────────
 
 export interface ScoreExplanation {
   headline: string;
-  reasons:  string[];  // bullet points, most important first
-  verdict:  "critical" | "high" | "medium" | "low";
+  reasons:  string[];
+  verdict:  BuilderVerdict;
 }
 
-/** Pure function — derives human-readable explanation from breakdown + article metadata. */
 export function generateScoreExplanation(
   breakdown: ScoreBreakdown,
   article: {
-    category:    string;
-    signal:      string;
-    publishedAt: string;
+    category:     string;
+    signal:       string;
+    publishedAt:  string;
     intelligence: { risk_level: string };
   }
 ): ScoreExplanation {
-  const { total, signal, freshness, interest, risk } = breakdown;
+  const { total, virality, freshness, build_potential, content_potential, technical_depth } = breakdown;
   const reasons: string[] = [];
 
-  // ── Signal reasons ──────────────────────────────────────────────────────
-  if (signal === 50) {
-    reasons.push("Active exploitation signal — high-risk or CVE with elevated intelligence flag");
-  } else if (signal === 35) {
-    reasons.push("High intelligence signal detected across monitored sources");
-  } else if (signal === 20) {
-    reasons.push("Moderate relevance signal — confirmed cybersecurity topic");
+  // ── Virality reasons ─────────────────────────────────────────────────────
+  if (virality === 50) {
+    reasons.push("Trending breakout signal — high-virality topic with strong engagement");
+  } else if (virality === 35) {
+    reasons.push("High-signal item — broadly discussed across monitored sources");
+  } else if (virality === 20) {
+    reasons.push("Moderate virality — confirmed AI / builder relevance");
   } else {
-    reasons.push("General intelligence signal — low specificity to active threats");
+    reasons.push("Low virality signal — general article with limited spread so far");
   }
 
-  // ── Freshness reasons ───────────────────────────────────────────────────
+  // ── Freshness reasons ────────────────────────────────────────────────────
   if (freshness === 30) {
-    reasons.push("Breaking: published within the last 6 hours — time-sensitive");
+    reasons.push("Breaking: published within the last 6 hours — get ahead of the curve");
   } else if (freshness === 20) {
-    reasons.push("Recent disclosure — published within the last 24 hours");
+    reasons.push("Fresh drop — published within the last 24 hours");
   } else if (freshness === 10) {
-    reasons.push("Fresh intelligence — published within 72 hours");
+    reasons.push("Recent — published within 72 hours, still timely");
   } else {
-    reasons.push("Aging intelligence — published more than 3 days ago");
+    reasons.push("Older item — may be a reference or evergreen resource");
   }
 
-  // ── Interest / category reasons ─────────────────────────────────────────
-  if (interest === 25) {
-    reasons.push("CVE / vulnerability category — highest operational priority");
-  } else if (interest === 20) {
-    reasons.push(`${article.category} category — strong interest overlap for analysts`);
-  } else if (interest === 15) {
-    reasons.push("Red Team operations category — relevant to offensive security teams");
+  // ── Build potential reasons ──────────────────────────────────────────────
+  if (build_potential >= 25) {
+    reasons.push(`${article.category} — top-tier category for builders to act on`);
+  } else if (build_potential >= 20) {
+    reasons.push(`${article.category} — strong build potential, worth prototyping`);
+  } else if (build_potential >= 15) {
+    reasons.push(`${article.category} — useful for builders tracking the AI landscape`);
   } else {
-    reasons.push("General category — lower priority relative to CVEs and threat intel");
+    reasons.push(`${article.category} — lower direct build potential`);
   }
 
-  // ── Risk context (informational) ────────────────────────────────────────
-  if (risk === 40) {
-    reasons.push("AI risk classifier: HIGH — language suggests active exploitation or breach");
-  } else if (risk === 20) {
-    reasons.push("AI risk classifier: MEDIUM — potential impact, no active exploitation confirmed");
+  // ── Content potential reasons ────────────────────────────────────────────
+  if (content_potential >= 20) {
+    reasons.push("Rich keyword density — high content signal for AI topics");
+  } else if (content_potential >= 15) {
+    reasons.push("Good content depth — solid topic coverage");
+  } else if (content_potential >= 10) {
+    reasons.push("Moderate content signal — some relevant AI keywords");
   } else {
-    reasons.push("AI risk classifier: LOW — no active exploitation language detected");
+    reasons.push("Sparse content signal — limited AI-specific keyword overlap");
   }
 
-  // ── Headline and verdict ────────────────────────────────────────────────
-  let verdict: ScoreExplanation["verdict"];
+  // ── Technical depth (informational) ─────────────────────────────────────
+  if (technical_depth === 40) {
+    reasons.push("Deep technical content detected — implementation-level details present");
+  } else if (technical_depth === 20) {
+    reasons.push("Moderate technical depth — concepts and patterns discussed");
+  } else {
+    reasons.push("Light technical depth — editorial or high-level overview");
+  }
+
+  const verdict = builderVerdict(total);
   let headline: string;
 
-  if (total >= 90) {
-    verdict  = "critical";
-    headline = "Critical threat score — immediate analyst attention recommended";
-  } else if (total >= 60) {
-    verdict  = "high";
-    headline = "High threat score — review within your current shift";
-  } else if (total >= 30) {
-    verdict  = "medium";
-    headline = "Medium threat score — monitor and prioritise if relevant to your environment";
+  if (verdict === "hot") {
+    headline = "Hot — build on this now, high virality and strong potential";
+  } else if (verdict === "rising") {
+    headline = "Rising — worth your attention, trending in the builder space";
+  } else if (verdict === "watch") {
+    headline = "Watch — moderate potential, keep this in your pipeline";
   } else {
-    verdict  = "low";
-    headline = "Low threat score — low operational urgency";
+    headline = "Low signal — queue for later or skip";
   }
 
   return { headline, reasons, verdict };

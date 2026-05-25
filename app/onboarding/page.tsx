@@ -4,19 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
-  AlertTriangle,
   Box,
   Check,
   CheckCircle2,
   ChevronRight,
-  Cloud,
   Cpu,
-  Eye,
   FlaskConical,
   Loader2,
   Network,
   Shield,
-  ShieldCheck,
   Target,
   Wrench,
   Zap,
@@ -45,74 +41,74 @@ interface Role {
 
 const ROLES: Role[] = [
   {
-    id: "soc-analyst",
-    label: "SOC Analyst",
-    icon: Activity,
-    desc: "Triage alerts, monitor threats, incident response",
-    seedCategories: ["SOC", "Threat Intelligence"],
-  },
-  {
-    id: "security-engineer",
-    label: "Security Engineer",
-    icon: Shield,
-    desc: "Build and harden security infrastructure",
-    seedCategories: ["CVEs", "Cloud Security"],
-  },
-  {
-    id: "red-team",
-    label: "Red Team",
-    icon: Target,
-    desc: "Offensive security, adversary simulation",
-    seedCategories: ["Red Team"],
-  },
-  {
-    id: "blue-team",
-    label: "Blue Team",
-    icon: ShieldCheck,
-    desc: "Defense, detection engineering, hunting",
-    seedCategories: ["Blue Team", "SOC"],
+    id: "ai-engineer",
+    label: "AI Engineer",
+    icon: Cpu,
+    desc: "Build AI-powered products, agents, and integrations",
+    seedCategories: ["Coding Agents", "Tools", "MCP"],
   },
   {
     id: "researcher",
     label: "Researcher",
     icon: FlaskConical,
-    desc: "Vulnerability research, AI security, publications",
-    seedCategories: ["AI Security", "Threat Intelligence", "CVEs"],
+    desc: "Study models, papers, evaluations, and benchmarks",
+    seedCategories: ["Research Papers", "Benchmarks"],
+  },
+  {
+    id: "founder",
+    label: "Founder",
+    icon: Zap,
+    desc: "Build and launch AI startups and products",
+    seedCategories: ["AI Startups", "OpenAI", "Anthropic"],
+  },
+  {
+    id: "developer",
+    label: "Developer",
+    icon: Wrench,
+    desc: "Code with AI assistance, explore repos and tools",
+    seedCategories: ["GitHub Repos", "Coding Agents", "Tools"],
+  },
+  {
+    id: "product",
+    label: "Product",
+    icon: Target,
+    desc: "Track AI products, industry trends, and releases",
+    seedCategories: ["AI Startups", "Tools", "OpenAI"],
   },
 ];
 
 const TOOL_OPTIONS = [
-  "Claude", "ChatGPT", "Codex", "Gemini", "Copilot", "Cursor", "Perplexity",
-  "CrowdStrike", "Splunk", "Sentinel", "Wiz", "Tenable", "Burp Suite", "Metasploit",
+  "Claude", "ChatGPT", "Gemini", "Copilot", "Cursor", "Perplexity", "Devin",
+  "Replit", "V0", "Bolt", "Lovable", "Windsurf", "Codeium", "Aider",
 ];
 
 interface Topic { id: string; label: string; icon: LucideIcon }
 
 const TOPICS: Topic[] = [
-  { id: "threat-intelligence",  label: "Threat Intelligence",  icon: Shield        },
-  { id: "cves",                 label: "CVEs",                 icon: AlertTriangle },
-  { id: "ai-security",          label: "AI Security",          icon: Cpu           },
-  { id: "red-team",             label: "Red Team",             icon: Target        },
-  { id: "blue-team",            label: "Blue Team",            icon: ShieldCheck   },
-  { id: "deception-technology", label: "Deception Technology", icon: Eye           },
-  { id: "honeypots",            label: "Honeypots",            icon: Network       },
-  { id: "soc",                  label: "SOC",                  icon: Activity      },
-  { id: "cloud-security",       label: "Cloud Security",       icon: Cloud         },
-  { id: "kubernetes-security",  label: "Kubernetes Security",  icon: Box           },
+  { id: "openai",          label: "OpenAI",          icon: Zap           },
+  { id: "anthropic",       label: "Anthropic",       icon: FlaskConical  },
+  { id: "coding-agents",   label: "Coding Agents",   icon: Wrench        },
+  { id: "mcp",             label: "MCP",             icon: Network       },
+  { id: "github-repos",    label: "GitHub Repos",    icon: Box           },
+  { id: "research-papers", label: "Research Papers", icon: Activity      },
+  { id: "ai-startups",     label: "AI Startups",     icon: Target        },
+  { id: "benchmarks",      label: "Benchmarks",      icon: CheckCircle2  },
+  { id: "tools",           label: "Tools",           icon: Cpu           },
+  { id: "security",        label: "Security",        icon: Shield        },
 ];
 
 /** Maps topic IDs → article category strings (for seeding behavior) */
 const TOPIC_TO_CATEGORY: Record<string, string> = {
-  "threat-intelligence":  "Threat Intelligence",
-  "cves":                 "CVEs",
-  "ai-security":          "AI Security",
-  "red-team":             "Red Team",
-  "blue-team":            "Blue Team",
-  "deception-technology": "Deception Technology",
-  "honeypots":            "Honeypots",
-  "soc":                  "SOC",
-  "cloud-security":       "Cloud Security",
-  "kubernetes-security":  "Kubernetes Security",
+  "openai":          "OpenAI",
+  "anthropic":       "Anthropic",
+  "coding-agents":   "Coding Agents",
+  "mcp":             "MCP",
+  "github-repos":    "GitHub Repos",
+  "research-papers": "Research Papers",
+  "ai-startups":     "AI Startups",
+  "benchmarks":      "Benchmarks",
+  "tools":           "Tools",
+  "security":        "Security",
 };
 
 // ─── Step types ───────────────────────────────────────────────────────────────
@@ -141,7 +137,7 @@ async function seedInitialBehavior(
       .from("articles")
       .select("id")
       .eq("category", category)
-      .order("threat_score", { ascending: false })
+      .order("builder_score", { ascending: false })
       .limit(3);
 
     if (!data?.length) continue;
@@ -365,7 +361,7 @@ export default function OnboardingPage() {
                 What&apos;s your role?
               </h1>
               <p className="mt-2 text-sm text-zinc-400">
-                We&apos;ll personalise your threat feed and score ranking based on your work.
+                We&apos;ll personalise your builder feed and score ranking based on your work.
               </p>
             </div>
 
@@ -432,10 +428,10 @@ export default function OnboardingPage() {
                   type="text"
                   value={domain}
                   onChange={(e) => setDomain(e.target.value)}
-                  placeholder="e.g. Deception Technology, Threat Intel, AppSec…"
+                  placeholder="e.g. Agent Patterns, MCP, LLM Tooling, AI Infra…"
                   className="w-full max-w-md rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-slate-100 placeholder-zinc-600 outline-none transition-colors focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/20"
                 />
-                <p className="mt-1.5 text-[11px] text-zinc-600">Optional — helps calibrate threat relevance</p>
+                <p className="mt-1.5 text-[11px] text-zinc-600">Optional — helps calibrate signal relevance</p>
               </div>
 
               {/* Tools */}

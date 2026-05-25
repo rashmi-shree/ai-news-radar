@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AI News Radar",
   description:
-    "Personalized cybersecurity intelligence in under 60 seconds.",
+    "Personalized AI builder intelligence in under 60 seconds.",
 };
 
 export default function RootLayout({

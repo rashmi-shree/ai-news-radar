@@ -57,7 +57,7 @@ const RISK_FILTERS: {
 }[] = [
   {
     value: "high",
-    label: "High Risk",
+    label: "High Opportunity",
     style: "border-zinc-700 text-zinc-400 hover:border-red-500/50 hover:text-red-400",
     activeStyle: "border-red-500/50 bg-red-500/10 text-red-400",
   },
@@ -76,10 +76,11 @@ const RISK_FILTERS: {
 ];
 
 const CATEGORY_FILTERS = [
-  "CVEs",
-  "AI Security",
-  "Threat Intelligence",
-  "Red Team",
+  "OpenAI",
+  "Anthropic",
+  "Coding Agents",
+  "Research Papers",
+  "Benchmarks",
 ] as const;
 
 const FUSE_OPTIONS: IFuseOptions<NewsItem> = {
@@ -181,7 +182,7 @@ export default function FeedPage() {
 
   // ─── Feed ranking ─────────────────────────────────────────────────────────
   //
-  // final_score = threat_score + interest_score + behavior_score + freshness_bonus
+  // final_score = builder_score + interest_score + behavior_score + freshness_bonus
 
   function applyFeedRanking(
     articles: NewsItem[],
@@ -239,7 +240,7 @@ export default function FeedPage() {
             1_200
           );
 
-          addToast("New threat intelligence received", "success");
+          addToast("New builder intelligence received", "success");
         }
       )
       .on(
@@ -609,7 +610,7 @@ export default function FeedPage() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search threats, CVEs, prompt injection, vendors..."
+                placeholder="Search repos, tools, papers, launches…"
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900 py-2.5 pl-9 pr-9 text-sm text-slate-100 placeholder-zinc-600 outline-none transition-colors focus:border-zinc-600"
               />
               {query && (
@@ -772,7 +773,7 @@ export default function FeedPage() {
 
         {status === "success" && (
           <p className="mt-10 text-center text-xs text-zinc-700">
-            Sources: OpenAI · Hacker News · NVD CVE
+            Sources: OpenAI · Anthropic · Hacker News · GitHub · Papers with Code
           </p>
         )}
       </main>

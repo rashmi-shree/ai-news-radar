@@ -7,11 +7,12 @@ import type { SignalLevel } from "@/src/lib/rss/filterNews";
 import type { SummaryResult, RiskLevel } from "@/src/lib/ai/types";
 import type { WorkspaceStatus } from "@/src/lib/supabase/savedArticles";
 import {
-  threatScoreBadgeStyle,
+  builderScoreBadgeStyle,
   getRecommendedAction,
   type ScoreBreakdown,
 } from "@/src/lib/scoring/threatScore";
 import WhyThisCard from "@/components/WhyThisCard";
+import WhySeeingPanel from "@/components/WhySeeingPanel";
 import type { ScoreComponents } from "@/src/lib/recommendation/feedScoring";
 
 export interface NewsItem {
@@ -27,8 +28,8 @@ export interface NewsItem {
   /** Debug — relevance score from scoring pipeline. */
   relevanceScore: number;
   intelligence: SummaryResult;
-  /** Computed threat score (0–105). */
-  threatScore?: number;
+  /** Computed builder score (0–125). */
+  builderScore?: number;
   /** Breakdown of individual score components. */
   scoreBreakdown?: ScoreBreakdown;
 }
@@ -42,16 +43,16 @@ export interface MatchHighlights {
 // ─── Style maps ───────────────────────────────────────────────────────────────
 
 const categoryStyles: Record<string, string> = {
-  "CVEs": "bg-red-950/60 text-red-300",
-  "AI Security": "bg-indigo-950/60 text-indigo-300",
-  "Threat Intelligence": "bg-amber-950/60 text-amber-300",
-  "Red Team": "bg-rose-950/60 text-rose-300",
-  "Blue Team": "bg-sky-950/60 text-sky-300",
-  "SOC": "bg-emerald-950/60 text-emerald-300",
-  "Cloud Security": "bg-violet-950/60 text-violet-300",
-  "Kubernetes Security": "bg-cyan-950/60 text-cyan-300",
-  "Honeypots": "bg-teal-950/60 text-teal-300",
-  "Deception Technology": "bg-purple-950/60 text-purple-300",
+  "OpenAI":          "bg-emerald-950/60 text-emerald-300",
+  "Anthropic":       "bg-orange-950/60 text-orange-300",
+  "Coding Agents":   "bg-violet-950/60 text-violet-300",
+  "MCP":             "bg-cyan-950/60 text-cyan-300",
+  "GitHub Repos":    "bg-zinc-800/60 text-zinc-300",
+  "Research Papers": "bg-amber-950/60 text-amber-300",
+  "AI Startups":     "bg-sky-950/60 text-sky-300",
+  "Benchmarks":      "bg-rose-950/60 text-rose-300",
+  "Tools":           "bg-teal-950/60 text-teal-300",
+  "Security":        "bg-red-950/60 text-red-300",
 };
 
 const riskStyles: Record<RiskLevel, { badge: string; border: string }> = {
@@ -91,7 +92,7 @@ function formatAge(iso: string): string {
 }
 
 const RISK_LABEL: Record<RiskLevel, string> = {
-  high: "High Risk",
+  high: "High Opportunity",
   medium: "Medium Risk",
   low: "Low Risk",
 };
@@ -135,9 +136,9 @@ const workspaceStyles: Record<
   Exclude<WorkspaceStatus, "ignored">,
   { badge: string; label: string }
 > = {
-  saved:         { badge: "border border-cyan-500/40 bg-cyan-500/10 text-cyan-300",    label: "SAVED" },
-  investigating: { badge: "border border-amber-500/40 bg-amber-500/10 text-amber-300", label: "INVESTIGATING" },
-  reviewed:      { badge: "border border-emerald-500/40 bg-emerald-500/10 text-emerald-300", label: "REVIEWED" },
+  saved:         { badge: "border border-cyan-500/40 bg-cyan-500/10 text-cyan-300",    label: "WATCHING" },
+  investigating: { badge: "border border-amber-500/40 bg-amber-500/10 text-amber-300", label: "RESEARCHING" },
+  reviewed:      { badge: "border border-emerald-500/40 bg-emerald-500/10 text-emerald-300", label: "BUILT" },
 };
 
 export default function NewsCard({
@@ -158,8 +159,8 @@ export default function NewsCard({
   const risk = item.intelligence.risk_level;
   const { badge: riskBadge, border: riskBorder } = riskStyles[risk];
   // Hide recommendation badge when workspace status is already displayed to avoid duplicate signals
-  const recommendation = (item.threatScore !== undefined && item.threatScore > 0 && !workspaceStatus)
-    ? getRecommendedAction(item.threatScore)
+  const recommendation = (item.builderScore !== undefined && item.builderScore > 0 && !workspaceStatus)
+    ? getRecommendedAction(item.builderScore)
     : null;
 
   const displaySummary = item.intelligence.ai_summary || item.summary;
@@ -230,28 +231,29 @@ export default function NewsCard({
           )}
         </div>
 
-        {/* ── Threat Score badge ── */}
-        {item.threatScore !== undefined && item.threatScore > 0 && (
+        {/* ── Builder Score badge ── */}
+        {item.builderScore !== undefined && item.builderScore > 0 && (
           <div className="group/score relative ml-auto shrink-0">
             <span
               className={clsx(
                 "cursor-default rounded-md px-2 py-0.5 text-xs font-semibold tracking-wide",
-                threatScoreBadgeStyle(item.threatScore)
+                builderScoreBadgeStyle(item.builderScore)
               )}
             >
-              THREAT {item.threatScore}
+              BUILD SCORE {item.builderScore}
             </span>
 
             {/* CSS-only tooltip */}
             {item.scoreBreakdown && (
-              <div className="invisible absolute right-0 top-full z-30 mt-1.5 w-44 rounded-lg border border-zinc-700 bg-zinc-900 p-3 shadow-xl group-hover/score:visible">
+              <div className="invisible absolute right-0 top-full z-30 mt-1.5 w-52 rounded-lg border border-zinc-700 bg-zinc-900 p-3 shadow-xl group-hover/score:visible">
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                  Score Breakdown
+                  Build Score
                 </p>
                 {[
-                  ["Signal",    item.scoreBreakdown.signal,    50],
-                  ["Freshness", item.scoreBreakdown.freshness, 30],
-                  ["Interest",  item.scoreBreakdown.interest,  25],
+                  ["Virality",          item.scoreBreakdown.virality,          50],
+                  ["Freshness",         item.scoreBreakdown.freshness,         30],
+                  ["Build Potential",   item.scoreBreakdown.build_potential,   25],
+                  ["Content Potential", item.scoreBreakdown.content_potential, 20],
                 ].map(([label, val, max]) => (
                   <div key={label as string} className="flex items-center justify-between py-0.5">
                     <span className="text-xs text-zinc-400">{label as string}</span>
@@ -263,8 +265,8 @@ export default function NewsCard({
                 ))}
                 <div className="border-t border-zinc-800/60 my-1" />
                 {[
-                  ["Risk",        item.scoreBreakdown.risk],
-                  ["AI Relevance",item.scoreBreakdown.relevance],
+                  ["Tech Depth", item.scoreBreakdown.technical_depth],
+                  ["Relevance",  item.scoreBreakdown.relevance],
                 ].map(([label, val]) => (
                   <div key={label as string} className="flex items-center justify-between py-0.5">
                     <span className="text-xs text-zinc-600">{label as string}</span>
@@ -273,8 +275,8 @@ export default function NewsCard({
                 ))}
                 <div className="mt-2 flex items-center justify-between border-t border-zinc-800 pt-2">
                   <span className="text-xs font-semibold text-zinc-300">Total</span>
-                  <span className={clsx("font-mono text-xs font-bold", threatScoreBadgeStyle(item.threatScore).split(" ").at(-1))}>
-                    {item.threatScore}
+                  <span className={clsx("font-mono text-xs font-bold", builderScoreBadgeStyle(item.builderScore).split(" ").at(-1))}>
+                    {item.builderScore}
                   </span>
                 </div>
               </div>
@@ -320,7 +322,7 @@ export default function NewsCard({
           </span>
         </div>
         <p className="text-xs leading-relaxed text-zinc-400">
-          {item.intelligence.why_it_matters || "Threat relevance still being analyzed."}
+          {item.intelligence.why_it_matters || "Builder relevance still being analyzed."}
         </p>
       </div>
 
@@ -359,7 +361,9 @@ export default function NewsCard({
       </div>
 
       {/* ── Why am I seeing this? ── */}
-      {scoreComponents && <WhyThisCard components={scoreComponents} />}
+      {scoreComponents
+        ? <WhyThisCard components={scoreComponents} />
+        : item.id && <WhySeeingPanel articleId={item.id} />}
     </article>
   );
 }

@@ -75,7 +75,7 @@ function StaleRow({ item }: { item: InvestigationItem }) {
             </span>
           )}
           <span className="font-mono text-[10px] text-zinc-600">
-            score {item.threatScore}
+            score {item.builderScore}
           </span>
         </div>
       </div>
@@ -87,8 +87,8 @@ function StaleRow({ item }: { item: InvestigationItem }) {
 
 function AttentionBanner({ staleCount, criticalCount }: { staleCount: number; criticalCount: number }) {
   const parts: string[] = [];
-  if (staleCount    > 0) parts.push(`${staleCount} stale investigation${staleCount !== 1 ? "s" : ""} (>${3}d)`);
-  if (criticalCount > 0) parts.push(`${criticalCount} critical open threat${criticalCount !== 1 ? "s" : ""}`);
+  if (staleCount    > 0) parts.push(`${staleCount} stale research item${staleCount !== 1 ? "s" : ""} (>${3}d)`);
+   if (criticalCount > 0) parts.push(`${criticalCount} critical open signal${criticalCount !== 1 ? "s" : ""}`);
 
   return (
     <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-500/25 bg-amber-950/20 px-4 py-3">
@@ -111,7 +111,7 @@ function EmptyWorkload() {
       </div>
       <div>
         <p className="text-sm font-semibold text-emerald-400">All clear</p>
-        <p className="mt-0.5 text-xs text-zinc-600">No open investigations</p>
+        <p className="mt-0.5 text-xs text-zinc-600">No open research</p>
       </div>
     </div>
   );
@@ -135,14 +135,14 @@ function WorkloadContent({ data }: { data: WorkloadData }) {
         <StatRow
           Icon={SearchCode}
           iconClass="text-amber-400"
-          label="Open Investigations"
+          label="Open Research"
           value={openCount}
           valueClass={openCount > 0 ? "text-amber-300" : "text-zinc-500"}
         />
         <StatRow
           Icon={Clock}
           iconClass="text-sky-400"
-          label="Avg Investigation Age"
+          label="Avg Research Age"
           value={avgAgeLabel}
           valueClass="text-sky-300"
         />
@@ -201,7 +201,7 @@ export default function WorkloadPanel() {
       <div className="mb-5 flex items-center gap-2.5">
         <SearchCode size={14} className="text-zinc-500" />
         <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-          Analyst Workload
+          Builder Workload
         </h2>
         <div className="flex-1 border-t border-zinc-800" />
 

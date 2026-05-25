@@ -43,11 +43,11 @@ export interface HeatmapData {
 
 export async function getAnalyticsData(): Promise<AnalyticsData> {
   const [scoreRes, categoryRes, statusRes] = await Promise.allSettled([
-    // All non-null threat scores
+    // All non-null builder scores
     supabase
       .from("articles")
-      .select("threat_score")
-      .not("threat_score", "is", null),
+      .select("builder_score")
+      .not("builder_score", "is", null),
 
     // All categories
     supabase
@@ -62,24 +62,24 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       .order("updated_at", { ascending: false, nullsFirst: false }),
   ]);
 
-  // ── 1. Threat score distribution ─────────────────────────────────────────
-  const buckets: Record<string, number> = { "0–30": 0, "31–60": 0, "61–90": 0, "91+": 0 };
+  // ── 1. Builder score distribution ────────────────────────────────────────
+  const buckets: Record<string, number> = { "0–40": 0, "41–70": 0, "71–89": 0, "90+": 0 };
 
   if (scoreRes.status === "fulfilled" && scoreRes.value.data) {
-    for (const row of scoreRes.value.data as { threat_score: number }[]) {
-      const s = row.threat_score;
-      if (s <= 30)      buckets["0–30"]++;
-      else if (s <= 60) buckets["31–60"]++;
-      else if (s <= 90) buckets["61–90"]++;
-      else              buckets["91+"]++;
+    for (const row of scoreRes.value.data as { builder_score: number }[]) {
+      const s = row.builder_score;
+      if (s < 40)      buckets["0–40"]++;
+      else if (s < 70) buckets["41–70"]++;
+      else if (s < 90) buckets["71–89"]++;
+      else             buckets["90+"]++;
     }
   }
 
   const scoreDistribution: ScoreBucket[] = [
-    { range: "0–30",  count: buckets["0–30"],  color: "text-zinc-400",   fill: "#71717a" },
-    { range: "31–60", count: buckets["31–60"], color: "text-amber-400",  fill: "#f59e0b" },
-    { range: "61–90", count: buckets["61–90"], color: "text-orange-400", fill: "#fb923c" },
-    { range: "91+",   count: buckets["91+"],   color: "text-red-400",    fill: "#f87171" },
+    { range: "0–40",  count: buckets["0–40"],  color: "text-zinc-400",  fill: "#71717a" },
+    { range: "41–70", count: buckets["41–70"], color: "text-cyan-400",  fill: "#22d3ee" },
+    { range: "71–89", count: buckets["71–89"], color: "text-amber-400", fill: "#f59e0b" },
+    { range: "90+",   count: buckets["90+"],   color: "text-rose-400",  fill: "#fb7185" },
   ];
 
   // ── 2. Category breakdown ─────────────────────────────────────────────────
@@ -93,14 +93,16 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   }
 
   const CAT_FILL: Record<string, string> = {
-    "CVEs":                 "#fb7185", // rose-400
-    "AI Security":          "#a78bfa", // violet-400
-    "Threat Intelligence":  "#fbbf24", // amber-400
-    "Red Team":             "#f87171", // red-400
-    "Cloud Security":       "#38bdf8", // sky-400
-    "Kubernetes Security":  "#34d399", // emerald-400
-    "Deception Technology": "#818cf8", // indigo-400
-    "SOC":                  "#94a3b8", // slate-400
+    "OpenAI":          "#34d399", // emerald-400
+    "Anthropic":       "#fb923c", // orange-400
+    "Coding Agents":   "#a78bfa", // violet-400
+    "MCP":             "#22d3ee", // cyan-400
+    "GitHub Repos":    "#a1a1aa", // zinc-400
+    "Research Papers": "#fbbf24", // amber-400
+    "AI Startups":     "#38bdf8", // sky-400
+    "Benchmarks":      "#fb7185", // rose-400
+    "Tools":           "#2dd4bf", // teal-400
+    "Security":        "#f87171", // red-400
   };
 
   const categoryBreakdown: CategoryBar[] = Object.entries(catCounts)
@@ -127,10 +129,10 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   }
 
   const statusBreakdown: StatusSlice[] = [
-    { status: "saved",         label: "Saved",         count: statusCounts.saved,         color: "text-cyan-400",    fill: "#22d3ee" },
-    { status: "investigating", label: "Investigating",  count: statusCounts.investigating,  color: "text-amber-400",   fill: "#f59e0b" },
-    { status: "reviewed",      label: "Reviewed",       count: statusCounts.reviewed,       color: "text-emerald-400", fill: "#34d399" },
-    { status: "ignored",       label: "Ignored",        count: statusCounts.ignored,        color: "text-zinc-500",    fill: "#52525b" },
+    { status: "saved",         label: "Watching",    count: statusCounts.saved,         color: "text-cyan-400",    fill: "#22d3ee" },
+    { status: "investigating", label: "Researching", count: statusCounts.investigating,  color: "text-amber-400",   fill: "#f59e0b" },
+    { status: "reviewed",      label: "Built",       count: statusCounts.reviewed,       color: "text-emerald-400", fill: "#34d399" },
+    { status: "ignored",       label: "Ignored",     count: statusCounts.ignored,        color: "text-zinc-500",    fill: "#52525b" },
   ];
 
   return { scoreDistribution, statusBreakdown, categoryBreakdown };

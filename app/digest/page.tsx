@@ -27,16 +27,16 @@ const PRIORITY_CFG: Record<
   1 | 2 | 3 | 4,
   { bar: string; badge: string; dot: string; label: string }
 > = {
-  1: { bar: "bg-red-500",    badge: "border-red-500/40 bg-red-500/10 text-red-300",       dot: "bg-red-500",    label: "Investigate Now" },
-  2: { bar: "bg-amber-400",  badge: "border-amber-500/40 bg-amber-500/10 text-amber-300", dot: "bg-amber-400",  label: "Monitor" },
-  3: { bar: "bg-yellow-500", badge: "border-yellow-500/30 bg-yellow-500/8 text-yellow-400", dot: "bg-yellow-500", label: "Review Later" },
-  4: { bar: "bg-zinc-600",   badge: "border-zinc-700 bg-zinc-800/60 text-zinc-500",       dot: "bg-zinc-600",   label: "Archive" },
+  1: { bar: "bg-rose-500",   badge: "border-rose-500/40 bg-rose-500/10 text-rose-300",     dot: "bg-rose-500",   label: "Build on This" },
+  2: { bar: "bg-amber-400",  badge: "border-amber-500/40 bg-amber-500/10 text-amber-300",  dot: "bg-amber-400",  label: "Worth a Look" },
+  3: { bar: "bg-cyan-500",   badge: "border-cyan-500/30 bg-cyan-500/8 text-cyan-400",      dot: "bg-cyan-500",   label: "Keep an Eye" },
+  4: { bar: "bg-zinc-600",   badge: "border-zinc-700 bg-zinc-800/60 text-zinc-500",        dot: "bg-zinc-600",   label: "Low Signal" },
 };
 
 function scoreColor(score: number): string {
-  if (score >= 90) return "text-red-400";
-  if (score >= 60) return "text-orange-400";
-  if (score >= 30) return "text-yellow-400";
+  if (score >= 90) return "text-rose-400";
+  if (score >= 70) return "text-amber-400";
+  if (score >= 40) return "text-cyan-400";
   return "text-zinc-500";
 }
 
@@ -120,8 +120,8 @@ function ThreatRow({
           <span className="rounded-md border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-500">
             {threat.category}
           </span>
-          <span className={clsx("font-mono text-xs font-bold", scoreColor(threat.threatScore))}>
-            {threat.threatScore}
+          <span className={clsx("font-mono text-xs font-bold", scoreColor(threat.builderScore))}>
+            {threat.builderScore}
           </span>
           <span className={clsx("rounded-md border px-1.5 py-0.5 text-[10px] font-semibold", cfg.badge)}>
             {threat.recommendation}
@@ -159,8 +159,8 @@ function InvestigationRow({ item }: { item: DigestData["openInvestigations"][0] 
         </div>
       </div>
 
-      <span className={clsx("shrink-0 font-mono text-xs font-bold", scoreColor(item.threatScore))}>
-        {item.threatScore}
+      <span className={clsx("shrink-0 font-mono text-xs font-bold", scoreColor(item.builderScore))}>
+        {item.builderScore}
       </span>
     </Link>
   );
@@ -282,11 +282,11 @@ export default function DigestPage() {
                   <div className="mb-1 flex items-center gap-2">
                     <Zap size={13} className="text-cyan-400" />
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-cyan-500">
-                      {digest.period} Security Brief
+                      {digest.period} Builder Brief
                     </span>
                   </div>
                   <h1 className="text-xl font-bold tracking-tight text-slate-100">
-                    Daily Threat Digest
+                    Daily Builder Digest
                   </h1>
                   <p className="mt-1 text-[11px] text-zinc-500">
                     Generated {timeAgo(digest.generatedAt)}
@@ -304,25 +304,25 @@ export default function DigestPage() {
               {/* One-line summary */}
               <p className="relative mt-5 text-sm text-zinc-400">
                 {totalTracked === 0
-                  ? "No threats tracked yet — start investigating from your feed."
-                  : `Tracking ${totalTracked} threat${totalTracked !== 1 ? "s" : ""}${criticalCount > 0 ? ` · ${criticalCount} critical` : ""}${investigatingCount > 0 ? ` · ${investigatingCount} under investigation` : ""}.`}
+                  ? "No items tracked yet — start from your feed."
+                  : `Tracking ${totalTracked} item${totalTracked !== 1 ? "s" : ""}${criticalCount > 0 ? ` · ${criticalCount} critical` : ""}${investigatingCount > 0 ? ` · ${investigatingCount} researching` : ""}.`}
               </p>
             </div>
 
             {/* ── Summary stat cards ── */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <StatCard icon={<ShieldAlert size={13} />} label="Critical"       value={criticalCount}      accent="red"   />
-              <StatCard icon={<SearchCode  size={13} />} label="Investigating"  value={investigatingCount} accent="amber" />
-              <StatCard icon={<Shield      size={13} />} label="Saved"          value={savedCount}         accent="cyan"  />
+              <StatCard icon={<SearchCode  size={13} />} label="Researching"   value={investigatingCount} accent="amber" />
+              <StatCard icon={<Shield      size={13} />} label="Watching"       value={savedCount}         accent="cyan"  />
               <StatCard icon={<CheckCircle2 size={13}/>} label="Total tracked"  value={totalTracked}       accent="zinc"  />
             </div>
 
             {/* ── Top 5 threats ── */}
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
-              <SectionHeader icon={<Flame size={13} />} title="Top Threats" count={digest.topThreats.length} />
+              <SectionHeader icon={<Flame size={13} />} title="Top Signals" count={digest.topThreats.length} />
 
               {digest.topThreats.length === 0 ? (
-                <p className="py-6 text-center text-xs text-zinc-600">No threats scored yet — run a feed sync first.</p>
+                <p className="py-6 text-center text-xs text-zinc-600">No articles scored yet — run a feed sync first.</p>
               ) : (
                 <div className="space-y-2">
                   {digest.topThreats.map((t, i) => (
@@ -334,11 +334,11 @@ export default function DigestPage() {
 
             {/* ── Open investigations ── */}
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
-              <SectionHeader icon={<SearchCode size={13} />} title="Open Investigations" count={investigatingCount} />
+              <SectionHeader icon={<SearchCode size={13} />} title="Open Research" count={investigatingCount} />
 
               {digest.openInvestigations.length === 0 ? (
                 <p className="py-6 text-center text-xs text-zinc-600">
-                  No open investigations.{" "}
+                  No open research.{" "}
                   <Link href="/feed" className="text-cyan-600 hover:text-cyan-400 transition-colors">
                     Start from the feed →
                   </Link>

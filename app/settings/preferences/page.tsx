@@ -26,25 +26,31 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TOPIC_OPTIONS = [
-  { id: "AI Security",      color: "indigo" },
-  { id: "CVEs",             color: "red"    },
-  { id: "Threat Intel",     color: "amber"  },
-  { id: "Red Team",         color: "rose"   },
-  { id: "Blue Team",        color: "sky"    },
-  { id: "SOC",              color: "emerald"},
-  { id: "Cloud Security",   color: "violet" },
+  { id: "OpenAI",          color: "emerald" },
+  { id: "Anthropic",       color: "orange"  },
+  { id: "Coding Agents",   color: "violet"  },
+  { id: "MCP",             color: "cyan"    },
+  { id: "Research Papers", color: "amber"   },
+  { id: "AI Startups",     color: "sky"     },
+  { id: "Benchmarks",      color: "rose"    },
+  { id: "Tools",           color: "teal"    },
+  { id: "GitHub Repos",    color: "zinc"    },
+  { id: "Security",        color: "red"     },
 ] as const;
 
 type TopicColor = (typeof TOPIC_OPTIONS)[number]["color"];
 
 const TOPIC_ACTIVE: Record<TopicColor, string> = {
-  indigo:  "border-indigo-500/60 bg-indigo-500/10 text-indigo-300",
-  red:     "border-red-500/60 bg-red-500/10 text-red-300",
-  amber:   "border-amber-500/60 bg-amber-500/10 text-amber-300",
-  rose:    "border-rose-500/60 bg-rose-500/10 text-rose-300",
-  sky:     "border-sky-500/60 bg-sky-500/10 text-sky-300",
   emerald: "border-emerald-500/60 bg-emerald-500/10 text-emerald-300",
+  orange:  "border-orange-500/60 bg-orange-500/10 text-orange-300",
   violet:  "border-violet-500/60 bg-violet-500/10 text-violet-300",
+  cyan:    "border-cyan-500/60 bg-cyan-500/10 text-cyan-300",
+  amber:   "border-amber-500/60 bg-amber-500/10 text-amber-300",
+  sky:     "border-sky-500/60 bg-sky-500/10 text-sky-300",
+  rose:    "border-rose-500/60 bg-rose-500/10 text-rose-300",
+  teal:    "border-teal-500/60 bg-teal-500/10 text-teal-300",
+  zinc:    "border-zinc-500/60 bg-zinc-500/10 text-zinc-300",
+  red:     "border-red-500/60 bg-red-500/10 text-red-300",
 };
 
 const DIGEST_OPTIONS: { value: DigestFrequency; label: string; desc: string }[] = [
@@ -56,7 +62,7 @@ const DIGEST_OPTIONS: { value: DigestFrequency; label: string; desc: string }[] 
 const RISK_OPTIONS: { value: RiskThreshold; label: string; desc: string; color: string }[] = [
   { value: "high",   label: "High only",   desc: "Critical & high-risk articles", color: "border-red-500/50 bg-red-500/8 text-red-300" },
   { value: "medium", label: "Medium+",     desc: "Medium and above",              color: "border-amber-500/50 bg-amber-500/8 text-amber-300" },
-  { value: "low",    label: "All threats", desc: "Show everything",               color: "border-zinc-600 bg-zinc-800/50 text-zinc-400" },
+  { value: "low",    label: "All signals", desc: "Show everything",               color: "border-zinc-600 bg-zinc-800/50 text-zinc-400" },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -283,13 +289,13 @@ export default function PreferencesPage() {
             <div className="space-y-4">
               {[
                 {
-                  label: "Critical threat alerts",
+                  label: "Hot signal alerts",
                   desc:  "Banner when a tracked article scores ≥ 90",
                   value: notifyCritical,
                   set:   setNotifyCritical,
                 },
                 {
-                  label: "New threat toasts",
+                  label: "New signal toasts",
                   desc:  "Toast notification when a new article arrives via realtime",
                   value: notifyNewThreats,
                   set:   setNotifyNewThreats,

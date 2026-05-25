@@ -16,13 +16,20 @@ import { clsx } from "clsx";
 import Header from "@/components/Header";
 import ThreatActions from "@/components/ThreatActions";
 import InvestigationNotes from "@/components/InvestigationNotes";
+import ResearchPanel from "@/components/ResearchPanel";
+import BuildIdeaPanel from "@/components/BuildIdeaPanel";
+import ContentPanel from "@/components/ContentPanel";
+import AddToCollectionButton from "@/components/AddToCollectionButton";
+import WhySeeingPanel from "@/components/WhySeeingPanel";
 import ArticleViewLogger from "@/components/ArticleViewLogger";
+import { getBuildIdea } from "@/src/lib/supabase/builderActions";
+import { getAllContentGenerations } from "@/src/lib/supabase/contentGenerations";
 import { getArticleById, getRelatedArticles } from "@/src/lib/supabase/articles";
 import type { FeedItem } from "@/src/lib/rss/fetchFeeds";
 import type { RiskLevel } from "@/src/lib/ai/types";
 import type { SignalLevel } from "@/src/lib/rss/filterNews";
 import {
-  threatScoreBadgeStyle,
+  builderScoreBadgeStyle,
   generateScoreExplanation,
   getRecommendedAction,
   type ScoreBreakdown,
@@ -54,23 +61,23 @@ function formatAge(iso: string): string {
 // ─── Style maps ───────────────────────────────────────────────────────────────
 
 const categoryStyles: Record<string, string> = {
-  "CVEs": "bg-red-950/60 text-red-300",
-  "AI Security": "bg-indigo-950/60 text-indigo-300",
-  "Threat Intelligence": "bg-amber-950/60 text-amber-300",
-  "Red Team": "bg-rose-950/60 text-rose-300",
-  "Blue Team": "bg-sky-950/60 text-sky-300",
-  "SOC": "bg-emerald-950/60 text-emerald-300",
-  "Cloud Security": "bg-violet-950/60 text-violet-300",
-  "Kubernetes Security": "bg-cyan-950/60 text-cyan-300",
-  "Honeypots": "bg-teal-950/60 text-teal-300",
-  "Deception Technology": "bg-purple-950/60 text-purple-300",
+  "OpenAI":          "bg-emerald-950/60 text-emerald-300",
+  "Anthropic":       "bg-orange-950/60 text-orange-300",
+  "Coding Agents":   "bg-violet-950/60 text-violet-300",
+  "MCP":             "bg-cyan-950/60 text-cyan-300",
+  "GitHub Repos":    "bg-zinc-800/60 text-zinc-300",
+  "Research Papers": "bg-amber-950/60 text-amber-300",
+  "AI Startups":     "bg-sky-950/60 text-sky-300",
+  "Benchmarks":      "bg-rose-950/60 text-rose-300",
+  "Tools":           "bg-teal-950/60 text-teal-300",
+  "Security":        "bg-red-950/60 text-red-300",
 };
 
 const riskStyles: Record<RiskLevel, { badge: string; bar: string; label: string }> = {
   high: {
     badge: "border border-red-500/50 bg-red-500/10 text-red-400",
     bar:   "bg-red-500/40",
-    label: "High Risk",
+    label: "High Opportunity",
   },
   medium: {
     badge: "border border-amber-500/50 bg-amber-500/10 text-amber-400",
@@ -210,27 +217,27 @@ function BreakdownCard({ label, icon, val, max, unit }: BreakdownCardProps) {
   );
 }
 
-function ThreatBreakdownCards({ breakdown }: { breakdown: ScoreBreakdown }) {
+function BuilderBreakdownCards({ breakdown }: { breakdown: ScoreBreakdown }) {
   return (
     <section className="mb-8">
       <div className="mb-3 flex items-center gap-2">
-        <Zap size={13} className="text-orange-400" />
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-orange-400">
-          Threat Breakdown
+        <Zap size={13} className="text-amber-400" />
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+          Build Score
         </h2>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <BreakdownCard
-          label="Threat Score"
+          label="Build Score"
           icon={<Zap size={12} />}
           val={breakdown.total}
-          max={105}
+          max={125}
         />
         <BreakdownCard
-          label="Signal Score"
+          label="Virality"
           icon={<Activity size={12} />}
-          val={breakdown.signal}
+          val={breakdown.virality}
           max={50}
         />
         <BreakdownCard
@@ -240,9 +247,9 @@ function ThreatBreakdownCards({ breakdown }: { breakdown: ScoreBreakdown }) {
           max={30}
         />
         <BreakdownCard
-          label="Interest"
+          label="Build Potential"
           icon={<Star size={12} />}
-          val={breakdown.interest}
+          val={breakdown.build_potential}
           max={25}
         />
       </div>
@@ -253,55 +260,56 @@ function ThreatBreakdownCards({ breakdown }: { breakdown: ScoreBreakdown }) {
 // ─── Threat Score Panel (enhanced) ───────────────────────────────────────────
 
 const VERDICT_STYLES = {
-  critical: {
-    border:   "border-red-500/30",
-    accent:   "bg-red-500",
-    chipBg:   "bg-red-500/15 border-red-500/40 text-red-300",
-    bar:      "bg-red-500/60",
-    headText: "text-red-300",
-    bullet:   "bg-red-500/50",
-    label:    "CRITICAL",
-    labelCls: "border border-red-500/50 bg-red-500/15 text-red-400",
+  hot: {
+    border:   "border-rose-500/30",
+    accent:   "bg-rose-500",
+    chipBg:   "bg-rose-500/15 border-rose-500/40 text-rose-300",
+    bar:      "bg-rose-500/60",
+    headText: "text-rose-300",
+    bullet:   "bg-rose-500/50",
+    label:    "HOT",
+    labelCls: "border border-rose-500/50 bg-rose-500/15 text-rose-400",
   },
-  high: {
-    border:   "border-orange-500/25",
-    accent:   "bg-orange-500",
-    chipBg:   "bg-orange-500/15 border-orange-500/40 text-orange-300",
-    bar:      "bg-orange-500/60",
-    headText: "text-orange-300",
-    bullet:   "bg-orange-500/50",
-    label:    "HIGH",
-    labelCls: "border border-orange-500/50 bg-orange-500/15 text-orange-400",
+  rising: {
+    border:   "border-amber-500/25",
+    accent:   "bg-amber-500",
+    chipBg:   "bg-amber-500/15 border-amber-500/40 text-amber-300",
+    bar:      "bg-amber-500/60",
+    headText: "text-amber-300",
+    bullet:   "bg-amber-500/50",
+    label:    "RISING",
+    labelCls: "border border-amber-500/50 bg-amber-500/15 text-amber-400",
   },
-  medium: {
-    border:   "border-yellow-500/20",
-    accent:   "bg-yellow-500",
-    chipBg:   "bg-yellow-500/15 border-yellow-500/40 text-yellow-300",
-    bar:      "bg-yellow-500/60",
-    headText: "text-yellow-300",
-    bullet:   "bg-yellow-500/50",
-    label:    "MEDIUM",
-    labelCls: "border border-yellow-500/50 bg-yellow-500/15 text-yellow-400",
+  watch: {
+    border:   "border-cyan-500/20",
+    accent:   "bg-cyan-500",
+    chipBg:   "bg-cyan-500/15 border-cyan-500/40 text-cyan-300",
+    bar:      "bg-cyan-500/60",
+    headText: "text-cyan-300",
+    bullet:   "bg-cyan-500/50",
+    label:    "WATCH",
+    labelCls: "border border-cyan-500/50 bg-cyan-500/15 text-cyan-400",
   },
-  low: {
+  normal: {
     border:   "border-zinc-800",
     accent:   "bg-zinc-700",
     chipBg:   "bg-zinc-800 border-zinc-700 text-zinc-400",
     bar:      "bg-zinc-600/60",
     headText: "text-zinc-400",
     bullet:   "bg-zinc-600",
-    label:    "LOW",
+    label:    "NORMAL",
     labelCls: "border border-zinc-700 bg-zinc-800 text-zinc-500",
   },
 } as const;
 
 const COMPONENT_CFG = [
-  { key: "signal"    as const, label: "Signal",    max: 50, barColor: "bg-orange-500/70", chipColor: "bg-orange-500/15 border-orange-500/40 text-orange-300" },
-  { key: "freshness" as const, label: "Freshness", max: 30, barColor: "bg-sky-500/70",    chipColor: "bg-sky-500/15    border-sky-500/40    text-sky-300"    },
-  { key: "interest"  as const, label: "Interest",  max: 25, barColor: "bg-violet-500/70", chipColor: "bg-violet-500/15 border-violet-500/40 text-violet-300" },
-] satisfies { key: keyof Omit<ScoreBreakdown, "total" | "risk" | "relevance">; label: string; max: number; barColor: string; chipColor: string }[];
+  { key: "virality"          as const, label: "Virality",          max: 50, barColor: "bg-rose-500/70",   chipColor: "bg-rose-500/15   border-rose-500/40   text-rose-300"   },
+  { key: "freshness"         as const, label: "Freshness",         max: 30, barColor: "bg-sky-500/70",    chipColor: "bg-sky-500/15    border-sky-500/40    text-sky-300"    },
+  { key: "build_potential"   as const, label: "Build Potential",   max: 25, barColor: "bg-violet-500/70", chipColor: "bg-violet-500/15 border-violet-500/40 text-violet-300" },
+  { key: "content_potential" as const, label: "Content Potential", max: 20, barColor: "bg-emerald-500/70",chipColor: "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"},
+] satisfies { key: keyof Omit<ScoreBreakdown, "total" | "technical_depth" | "relevance">; label: string; max: number; barColor: string; chipColor: string }[];
 
-function ThreatScorePanel({
+function BuilderScorePanel({
   breakdown,
   article,
 }: {
@@ -313,7 +321,7 @@ function ThreatScorePanel({
     intelligence: { risk_level: string };
   };
 }) {
-  const { total, risk, relevance } = breakdown;
+  const { total, technical_depth, relevance } = breakdown;
   const explanation = generateScoreExplanation(breakdown, article);
   const vs = VERDICT_STYLES[explanation.verdict];
 
@@ -328,18 +336,18 @@ function ThreatScorePanel({
           {/* ── Header row ── */}
           <div className="mb-5 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Zap size={14} className="text-orange-400" />
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-orange-400">
-                Threat Score
+              <Zap size={14} className="text-amber-400" />
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+                Build Score
               </h2>
             </div>
             <div className="flex items-center gap-2">
               <span className={clsx("rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest", vs.labelCls)}>
                 {vs.label}
               </span>
-              <span className={clsx("rounded-md px-2.5 py-0.5 font-mono text-xl font-bold", threatScoreBadgeStyle(total))}>
+              <span className={clsx("rounded-md px-2.5 py-0.5 font-mono text-xl font-bold", builderScoreBadgeStyle(total))}>
                 {total}
-                <span className="ml-1 text-xs font-normal text-zinc-600">/ 105</span>
+                <span className="ml-1 text-xs font-normal text-zinc-600">/ 125</span>
               </span>
             </div>
           </div>
@@ -382,7 +390,7 @@ function ThreatScorePanel({
           <div className="mb-6 flex items-center justify-between rounded-lg bg-zinc-900/60 px-3 py-2">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">Total</span>
             <span className={clsx("font-mono text-sm font-bold", vs.headText)}>
-              {breakdown.signal} + {breakdown.freshness} + {breakdown.interest}
+              {breakdown.virality} + {breakdown.freshness} + {breakdown.build_potential} + {breakdown.content_potential}
               {" = "}
               <span className="text-base">{total}</span>
             </span>
@@ -413,19 +421,19 @@ function ThreatScorePanel({
             </ul>
 
             {/* Context (not scored) */}
-            {(risk > 0 || relevance > 0) && (
+            {(technical_depth > 0 || relevance > 0) && (
               <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-800 pt-3">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-700">
                   Context (not scored)
                 </span>
-                {risk > 0 && (
+                {technical_depth > 0 && (
                   <span className="flex items-center gap-1 font-mono text-[10px] text-zinc-600">
-                    Risk
+                    Tech Depth
                     <span className={clsx(
                       "rounded px-1 py-0.5 text-[9px] font-bold uppercase",
-                      risk === 40 ? "text-red-500" : risk === 20 ? "text-amber-500" : "text-zinc-600"
+                      technical_depth === 40 ? "text-violet-400" : technical_depth === 20 ? "text-cyan-500" : "text-zinc-600"
                     )}>
-                      {risk === 40 ? "HIGH" : risk === 20 ? "MEDIUM" : "LOW"}
+                      {technical_depth === 40 ? "DEEP" : technical_depth === 20 ? "MOD" : "LIGHT"}
                     </span>
                   </span>
                 )}
@@ -458,18 +466,18 @@ export default async function ArticlePage({
   const article = await getArticleById(id);
   if (!article) notFound();
 
-  const related = await getRelatedArticles(
-    article.category,
-    article.intelligence.risk_level,
-    id
-  );
+  const [related, initialBuildIdea, initialContent] = await Promise.all([
+    getRelatedArticles(article.category, article.intelligence.risk_level, id),
+    getBuildIdea(id),
+    getAllContentGenerations(id),
+  ]);
 
   const risk = (article.intelligence.risk_level ?? "low") as RiskLevel;
   const riskStyle = riskStyles[risk] ?? riskStyles.low;
   const catStyle = categoryStyles[article.category] ?? "bg-zinc-800 text-zinc-300";
   const displaySummary = article.intelligence.ai_summary || article.summary;
-  const recommendation = (article.threatScore ?? 0) > 0
-    ? getRecommendedAction(article.threatScore!)
+  const recommendation = (article.builderScore ?? 0) > 0
+    ? getRecommendedAction(article.builderScore!)
     : null;
 
   return (
@@ -517,15 +525,15 @@ export default async function ArticlePage({
           <span className={clsx("rounded-md px-2 py-0.5 text-xs", signalStyles[article.signal])}>
             {article.signal}
           </span>
-          {(article.threatScore ?? 0) > 0 && (
+          {(article.builderScore ?? 0) > 0 && (
             <span
               className={clsx(
                 "flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs font-semibold",
-                threatScoreBadgeStyle(article.threatScore!)
+                builderScoreBadgeStyle(article.builderScore!)
               )}
             >
               <Zap size={10} />
-              THREAT {article.threatScore}
+              BUILD SCORE {article.builderScore}
             </span>
           )}
           {recommendation && (
@@ -588,7 +596,7 @@ export default async function ArticlePage({
             <span className={clsx(
               "ml-auto font-mono text-[10px] text-zinc-600",
             )}>
-              score {article.threatScore}
+              score {article.builderScore}
             </span>
           </div>
         )}
@@ -632,9 +640,9 @@ export default async function ArticlePage({
           <p className="text-base leading-relaxed text-zinc-200">{displaySummary}</p>
         </section>
 
-        {/* ── Threat Score Panel ── */}
+        {/* ── Builder Score Panel ── */}
         {article.scoreBreakdown && article.scoreBreakdown.total > 0 && (
-          <ThreatScorePanel breakdown={article.scoreBreakdown} article={article} />
+          <BuilderScorePanel breakdown={article.scoreBreakdown} article={article} />
         )}
 
         {/* ── Why This Matters ── */}
@@ -647,7 +655,7 @@ export default async function ArticlePage({
               </h2>
             </div>
             <p className="text-sm leading-relaxed text-zinc-300">
-              {article.intelligence.why_it_matters || "Threat relevance still being analyzed."}
+              {article.intelligence.why_it_matters || "Builder relevance still being analyzed."}
             </p>
           </div>
         </section>
@@ -677,8 +685,23 @@ export default async function ArticlePage({
         <div className="mb-8 h-px bg-zinc-800" />
 
 
-        {/* ── Threat Actions (client component) ── */}
-        <ThreatActions articleId={id} />
+        {/* ── Threat Actions + Collection (client components) ── */}
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <ThreatActions articleId={id} />
+          <AddToCollectionButton articleId={id} />
+        </div>
+
+        {/* ── Why am I seeing this? (client component) ── */}
+        <WhySeeingPanel articleId={id} />
+
+        {/* ── Research Panel (client component) ── */}
+        <ResearchPanel articleId={id} initialBrief={article.researchBrief ?? null} />
+
+        {/* ── Build Idea Panel (client component) ── */}
+        <BuildIdeaPanel articleId={id} initialIdea={initialBuildIdea} />
+
+        {/* ── Content Panel (client component) ── */}
+        <ContentPanel articleId={id} initialContent={initialContent} />
 
         {/* ── Investigation Notes (client component) ── */}
         <InvestigationNotes articleId={id} />

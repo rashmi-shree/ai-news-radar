@@ -27,7 +27,6 @@ export const RISK_RULES: Array<{ keywords: string[]; risk: RiskLevel }> = [
       "prompt injection",
       "jailbreak",
       "agent attack",
-      "ai security",
       "adversarial",
       "model exfiltration",
       "supply chain",
@@ -43,7 +42,6 @@ export const RISK_RULES: Array<{ keywords: string[]; risk: RiskLevel }> = [
   },
   {
     keywords: [
-      "red team",
       "bug bounty",
       "pentest",
       "security research",
@@ -60,89 +58,90 @@ export const RISK_RULES: Array<{ keywords: string[]; risk: RiskLevel }> = [
 // Picked deterministically by title hash — no randomness between renders.
 
 export const WHY_IT_MATTERS: Record<string, string[]> = {
-  CVEs: [
-    "Unpatched systems are directly exposed. Cross-reference your asset inventory and apply vendor patches or deploy runtime mitigations immediately.",
-    "If this component is anywhere in your stack, treat this as P0. Active exploitation may already be underway.",
-    "Validate your patch posture across all environments. Even partially-mitigated instances may remain exploitable via chaining.",
+  OpenAI: [
+    "New capabilities from OpenAI can unlock features in your product or shift the competitive baseline. Evaluate how this changes your architecture.",
+    "If you're building on the OpenAI API, this update may affect rate limits, pricing, context windows, or model behavior — test your integration.",
+    "Benchmark against your current implementation. New models often change the cost/performance tradeoff you've optimized around.",
   ],
-  "AI Security": [
-    "Organizations running LLM-based agents or chatbots face this attack surface directly. Review prompt sanitization and output validation pipelines.",
-    "If you're building on foundation models, adversarial inputs targeting your instruction chain may bypass current guardrails.",
-    "AI red teaming should include this variant. Update your model evaluation harness and test against adversarial prompt libraries.",
+  Anthropic: [
+    "Claude updates often come with improved instruction-following and reduced refusals. Consider testing on your hardest prompts.",
+    "If you're using Claude via API, check the changelog for breaking changes to tool use, system prompt handling, or token limits.",
+    "Anthropic's safety research often previews what will become industry standard — stay ahead of alignment constraints in your product.",
   ],
-  "Threat Intelligence": [
-    "This TTP may already be active against targets in your sector. Update detection rules and threat hunt for related IOCs in your telemetry.",
-    "Enrich your threat model with this adversary behavior. Share IOCs through your ISAC or internal threat sharing channels.",
-    "Cross-reference existing telemetry for indicators. Early detection of this campaign could prevent significant impact.",
+  "Coding Agents": [
+    "A new coding tool or agent update could meaningfully accelerate your development loop. Run a quick benchmark on your own codebase.",
+    "Adoption in your team could compound quickly — even a 10% productivity boost adds up. Worth a 30-minute pilot.",
+    "If you're building dev tools yourself, this is a signal of where the market is moving. Integrate or differentiate accordingly.",
   ],
-  "Red Team": [
-    "New offensive technique documented. Run it through your purple team to validate whether existing detection coverage catches it.",
-    "Useful for your next tabletop or purple team exercise. Confirm SIEM/EDR rule coverage before adversaries operationalize this.",
-    "Document and test in a controlled lab environment before adding to your offensive toolkit.",
+  MCP: [
+    "MCP is becoming the standard for connecting models to external tools. Early adoption means your integrations will be compatible by default.",
+    "If you're building AI agents, adding MCP support now saves significant refactoring later as the ecosystem standardizes.",
+    "New MCP server releases often unlock integrations with popular services. Check whether your workflow could benefit directly.",
   ],
-  "Blue Team": [
-    "Detection opportunity — implement the described behavioral signatures in your EDR or SIEM stack now.",
-    "This variant may bypass existing detection rules. Update your detection-as-code pipeline and validate coverage gaps.",
-    "Behavioral analytic opportunity available. Review whether your current rules cover this specific attack path.",
+  "GitHub Repos": [
+    "High-traction repos often signal emerging tools or frameworks that could save weeks of implementation time. Fork and experiment.",
+    "Open source releases from major labs often contain reference implementations worth studying before building your own.",
+    "Trending repos can indicate what the developer community is converging on — useful signal for picking dependencies.",
   ],
-  SOC: [
-    "Alert tuning opportunity. Implement this detection to reduce false positives while improving fidelity on real threats.",
-    "Playbook update recommended. Integrate this into your IR runbooks for faster, consistent analyst triage.",
-    "Review your case management and escalation paths — this class of alert benefits from a dedicated workflow.",
+  "Research Papers": [
+    "This paper may describe a technique directly applicable to your current engineering challenges. Skim the abstract and results section.",
+    "Reproductions of research findings often appear as open-source libraries within weeks. Watch for an implementation drop.",
+    "If a competitor could read this paper and ship a feature before you, that's a signal to prioritize evaluation.",
   ],
-  "Cloud Security": [
-    "Audit your cloud configurations for this pattern. IaC misconfigs are often widespread across multiple environments.",
-    "Review IAM policies and resource configurations. This class of misconfiguration is frequently overlooked in cloud-native stacks.",
-    "Run a CSPM scan targeting this control family. Prioritize remediation in production environments first.",
+  "AI Startups": [
+    "New entrants and funding rounds reshape the competitive landscape. Understand what problem they're solving and whether it overlaps with yours.",
+    "Startup launches often surface new approaches worth borrowing. Check their technical blog or GitHub for implementation details.",
+    "Series A/B funding signals the market is validating a category — useful for roadmap prioritization and positioning.",
   ],
-  "Kubernetes Security": [
-    "Review pod security policies and RBAC across your clusters. Default configs are often exploitable out-of-the-box.",
-    "If you run unmanaged Kubernetes this is urgent. Managed services (EKS/AKS/GKE) may still be affected depending on configuration.",
-    "Validate your admission controller policies — this class of attack may bypass existing policy-as-code controls.",
+  Benchmarks: [
+    "Benchmark results directly affect which model you should use for a given task. Re-run your evaluations against the new leader.",
+    "If your product relies on a specific capability, this benchmark data gives you an objective basis for model selection.",
+    "Leaderboard shifts often precede pricing changes and API availability — plan your model strategy accordingly.",
   ],
-  "Deception Technology": [
-    "Evaluate whether your deception layer covers this attack vector. Update honeypot configurations to detect this behavior.",
-    "New bypass technique documented. Assess whether your existing deception infrastructure would still alert on this pattern.",
+  Tools: [
+    "New SDK or API release may expose capabilities you've been waiting on. Check the changelog and update your integration plan.",
+    "Framework updates can reduce boilerplate in your stack. A version bump today might eliminate hundreds of lines of custom code.",
+    "Early adoption of popular tools builds expertise before they become table stakes — useful for hiring and product differentiation.",
   ],
-  Honeypots: [
-    "Evaluate whether your honeypot coverage includes this threat vector. Update sensor placement and lure configurations.",
-    "New threat actor behavior documented. Align your honeypot telemetry to detect this reconnaissance or exploitation pattern.",
+  Security: [
+    "Security findings in AI systems often have patterns that apply broadly. Audit your input handling and output filtering against the reported pattern.",
+    "Data exposure in AI infrastructure is increasingly common. Review your API key management and data handling practices.",
+    "Security findings in models or frameworks you depend on may require updates or architectural changes — assess your exposure.",
   ],
 };
 
 export const WHY_IT_MATTERS_DEFAULT: string[] = [
-  "Review your detection coverage and assess whether this technique is in scope for your threat model.",
-  "Security teams should evaluate the relevance of this finding to their specific environment and asset inventory.",
-  "Stay informed — understanding emerging techniques helps prioritize your defensive investment.",
+  "Evaluate how this development affects your current build and roadmap.",
+  "Builders and researchers should assess whether this creates an opportunity or changes an assumption in their work.",
+  "Stay current — the AI landscape moves fast and early awareness compounds into a meaningful advantage.",
 ];
 
 // ─── Humor pools ──────────────────────────────────────────────────────────────
 
 export const HUMOR: Record<RiskLevel, string[]> = {
   high: [
-    "CVSS score: please update immediately.",
-    "Affected versions: yours.",
-    "Patch notes: 'we probably should have fixed this sooner'.",
-    "Nothing says Monday like an emergency CAB meeting.",
-    "The attackers read the advisory before you did.",
-    "At least the PoC is well-documented.",
-    "Your on-call rotation just got more interesting.",
-    "Exploitability: trivial. Urgency: yesterday.",
+    "The model dropped, the benchmark is broken, and your context window just got longer. Good morning.",
+    "New SOTA. Your architecture: legacy.",
+    "Raised $100M. Still has no revenue. This is fine.",
+    "The paper came out Friday. The replication came out Saturday. The startup came out Sunday.",
+    "Another model, another eval dataset, another claim of AGI. Please wait for the system card.",
+    "Ships in two weeks. (Weeks: undefined.)",
+    "Context window: 1M tokens. Attention: decreasing.",
   ],
   medium: [
     "Your AI intern trusted user input. Again.",
     "Turns out 'helpful and harmless' is harder than it looks.",
-    "Guardrails: enabled. Attacker creativity: higher.",
-    "The model passed alignment eval. The adversary didn't get that memo.",
+    "Guardrails: enabled. Creativity: finding a way around them.",
+    "The model passed alignment eval. The prompt engineer didn't get that memo.",
     "It's not a jailbreak, it's 'creative prompt optimization'.",
-    "Supply chain: great for groceries, terrible for software.",
-    "Credentials: the gift that keeps on rotating.",
+    "The API worked in the demo. Naturally.",
+    "Fine-tuned on a proprietary dataset. Dataset: vibes.",
   ],
   low: [
-    "Someone stayed up late, found this, filed the report, and got $500. Respect.",
-    "Red team 1 — 0 Blue team. Please check your logs.",
-    "Bug bounty accepted. Sat in the backlog for 6 months.",
-    "Low severity today. 'Wait, this chains with what?' tomorrow.",
-    "Disclosure handled responsibly. A rarity worth celebrating.",
+    "Someone opened an issue at 2am with detailed steps to reproduce. We see you.",
+    "100 stars on GitHub. 99 of them are the founder's alt accounts.",
+    "Bug filed. Sitting in backlog. Priority: some day.",
+    "Low impact today. 'Wait, this chains with what?' tomorrow.",
+    "Responsibly disclosed. Fix shipped. Changelog says 'minor improvements'.",
   ],
 };

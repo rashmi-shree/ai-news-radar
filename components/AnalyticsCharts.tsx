@@ -87,7 +87,7 @@ function ChartSkeleton({ title }: { title: string }) {
   );
 }
 
-// ─── 1. Threat Score Distribution (vertical bar) ──────────────────────────────
+// ─── 1. Build Score Distribution (vertical bar) ───────────────────────────────
 
 function ScoreDistributionChart({ data }: { data: AnalyticsData["scoreDistribution"] }) {
   const isEmpty = data.every((b) => b.count === 0);
@@ -95,7 +95,7 @@ function ScoreDistributionChart({ data }: { data: AnalyticsData["scoreDistributi
   return (
     <div className={PANEL_CLASS}>
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-        Threat Score Distribution
+        Build Score Distribution
       </p>
       <p className="mb-5 text-[10px] text-zinc-700">articles by score range</p>
 
@@ -177,7 +177,7 @@ function StatusDonutChart({ data }: { data: AnalyticsData["statusBreakdown"] }) 
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
         Status Breakdown
       </p>
-      <p className="mb-3 text-[10px] text-zinc-700">tracked articles by analyst status</p>
+      <p className="mb-3 text-[10px] text-zinc-700">tracked articles by builder status</p>
 
       {total === 0 ? (
         <div className="flex h-44 items-center justify-center text-xs text-zinc-700">
@@ -315,7 +315,7 @@ export default function AnalyticsCharts() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {loading ? (
           <>
-            <ChartSkeleton title="Threat Score Distribution" />
+            <ChartSkeleton title="Build Score Distribution" />
             <ChartSkeleton title="Status Breakdown" />
             <ChartSkeleton title="Category Breakdown" />
           </>

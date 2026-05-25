@@ -67,9 +67,9 @@ type ActionDef = {
 const ACTIONS: ActionDef[] = [
   {
     status:      "saved",
-    label:       "Save",
-    activeLabel: "Saved",
-    toast:       "Threat saved",
+    label:       "Watch",
+    activeLabel: "Watching",
+    toast:       "Added to watchlist",
     Icon:        Bookmark,
     ActiveIcon:  BookmarkCheck,
     activeBase:  "border-cyan-500/60 bg-cyan-500/15 text-cyan-200",
@@ -78,9 +78,9 @@ const ACTIONS: ActionDef[] = [
   },
   {
     status:      "investigating",
-    label:       "Investigating",
-    activeLabel: "Investigating",
-    toast:       "Investigation started",
+    label:       "Research",
+    activeLabel: "Researching",
+    toast:       "Research started",
     Icon:        SearchCode,
     ActiveIcon:  SearchCode,
     activeBase:  "border-amber-500/60 bg-amber-500/15 text-amber-200",
@@ -89,9 +89,9 @@ const ACTIONS: ActionDef[] = [
   },
   {
     status:      "reviewed",
-    label:       "Mark Reviewed",
-    activeLabel: "Reviewed",
-    toast:       "Marked reviewed",
+    label:       "Mark Built",
+    activeLabel: "Built",
+    toast:       "Marked built",
     Icon:        Circle,
     ActiveIcon:  CheckCircle2,
     activeBase:  "border-emerald-500/60 bg-emerald-500/15 text-emerald-200",
@@ -102,7 +102,7 @@ const ACTIONS: ActionDef[] = [
     status:      "ignored",
     label:       "Ignore",
     activeLabel: "Ignored",
-    toast:       "Threat ignored",
+    toast:       "Ignored",
     Icon:        EyeOff,
     ActiveIcon:  EyeOff,
     activeBase:  "border-zinc-500/60 bg-zinc-800 text-zinc-300",
@@ -189,7 +189,7 @@ export default function ThreatActions({ articleId }: { articleId: string }) {
   return (
     <section className="mb-10">
       <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-600">
-        Threat Actions
+        Actions
       </h2>
 
       <div className="flex flex-wrap gap-3">

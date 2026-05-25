@@ -1,5 +1,5 @@
 import Parser from "rss-parser";
-import { sources, type NewsSource } from "./sources";
+import { sources, inferSourceType, type NewsSource, type SourceType } from "./sources";
 import {
   isHardExcluded,
   inferCategory,
@@ -8,8 +8,10 @@ import {
 } from "./filterNews";
 import { generateFallback } from "../ai/summarize";
 import type { SummaryResult } from "../ai/types";
-import { fetchNvdCves } from "./fetchNvdCves";
+import { fetchGitHubTrending } from "./fetchGitHub";
+import { fetchAnthropicBlog } from "./fetchAnthropicBlog";
 import type { ScoreBreakdown } from "../scoring/threatScore";
+import type { ResearchBrief } from "../ai/research";
 
 export type { ScoreBreakdown };
 
@@ -21,26 +23,31 @@ export type FeedItem = {
   publishedAt: string;
   source: string;
   category: string;
+  /** Classified content type stored in articles.source_type */
+  sourceType?: SourceType;
   summary: string;
   signal: SignalLevel;
-  /** Debug only — relevance score used for filtering and sorting. */
+  /** Raw relevance score used for filtering and sorting. */
   relevanceScore: number;
   intelligence: SummaryResult;
-  /** Computed threat score (0–150). Persisted to DB after ingestion. */
-  threatScore?: number;
+  /** Computed builder score (0–125). Persisted to DB after ingestion. */
+  builderScore?: number;
   /** Breakdown of individual score components. */
   scoreBreakdown?: ScoreBreakdown;
+  /** AI-generated research brief. Present after user triggers generation. */
+  researchBrief?: ResearchBrief | null;
 };
 
-const RSS_TIMEOUT_MS = 3_000;
+const RSS_TIMEOUT_MS = 5_000;
 
 const parser = new Parser({
   timeout: RSS_TIMEOUT_MS,
   headers: { "User-Agent": "AI-News-Radar/1.0" },
 });
 
-const LIMIT = 20;
-const MIN_SCORE = 3;
+/** Max articles returned from the full pipeline. */
+const FEED_LIMIT = 60;
+const MIN_SCORE  = 3;
 const SUMMARY_MAX_CHARS = 280;
 
 /** Races a promise against a hard timeout. */
@@ -53,8 +60,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 const SIGNAL_ORDER: Record<SignalLevel, number> = {
   "High Signal": 0,
-  "Relevant": 1,
-  "General": 2,
+  "Relevant":    1,
+  "General":     2,
 };
 
 function truncate(text: string): string {
@@ -69,19 +76,16 @@ function extractSummary(item: Parser.Item): string {
 }
 
 function sortItems(a: FeedItem, b: FeedItem): number {
-  // Primary: signal level (High Signal first)
   const signalDiff = SIGNAL_ORDER[a.signal] - SIGNAL_ORDER[b.signal];
   if (signalDiff !== 0) return signalDiff;
 
-  // Secondary: relevance score (higher first)
   const scoreDiff = b.relevanceScore - a.relevanceScore;
   if (scoreDiff !== 0) return scoreDiff;
 
-  // Tertiary: newest first
-  return (
-    new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  );
+  return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
 }
+
+// ─── RSS feed fetcher ─────────────────────────────────────────────────────────
 
 export async function fetchFeed(source: NewsSource): Promise<FeedItem[]> {
   const feed = await parser.parseURL(source.url);
@@ -90,7 +94,6 @@ export async function fetchFeed(source: NewsSource): Promise<FeedItem[]> {
   for (const item of feed.items) {
     const title = item.title?.trim() ?? "(No title)";
 
-    // Hard exclusion — drop immediately
     if (isHardExcluded(title)) continue;
 
     const summary = extractSummary(item);
@@ -108,22 +111,22 @@ export async function fetchFeed(source: NewsSource): Promise<FeedItem[]> {
       sourceId: source.id,
     });
 
-    // Score gate — discard low-signal articles
     if (score < MIN_SCORE) continue;
 
-    const intelligence = generateFallback({
-      title,
-      summary,
-      category,
-      source: source.name,
-    });
+    const intelligence = generateFallback({ title, summary, category, source: source.name });
+
+    // Use declared source_type; if category inference gave us something more specific, respect it
+    const sourceType = inferSourceType(category) !== source.source_type
+      ? inferSourceType(category)
+      : source.source_type;
 
     items.push({
       title,
-      link: item.link ?? item.guid ?? "",
-      publishedAt: item.isoDate ?? item.pubDate ?? new Date().toISOString(),
-      source: source.name,
+      link:           item.link ?? item.guid ?? "",
+      publishedAt:    item.isoDate ?? item.pubDate ?? new Date().toISOString(),
+      source:         source.name,
       category,
+      sourceType,
       summary,
       signal,
       relevanceScore: score,
@@ -134,25 +137,29 @@ export async function fetchFeed(source: NewsSource): Promise<FeedItem[]> {
   return items;
 }
 
+// ─── Aggregate pipeline ───────────────────────────────────────────────────────
+
 export async function fetchAllFeeds(): Promise<FeedItem[]> {
-  // Run RSS sources and NVD API in parallel; each with its own timeout.
-  const [rssResults, nvdResult] = await Promise.all([
+  // Run all sources concurrently; each with its own timeout
+  const [rssResults, githubResult, anthropicResult] = await Promise.all([
     Promise.allSettled(
-      sources.map((s) =>
-        withTimeout(fetchFeed(s), RSS_TIMEOUT_MS, s.name)
-      )
+      sources.map((s) => withTimeout(fetchFeed(s), RSS_TIMEOUT_MS, s.name))
     ),
     Promise.allSettled([
-      withTimeout(fetchNvdCves(), RSS_TIMEOUT_MS, "NVD API"),
+      withTimeout(fetchGitHubTrending(), RSS_TIMEOUT_MS * 2, "GitHub Trending"),
+    ]),
+    Promise.allSettled([
+      withTimeout(fetchAnthropicBlog(), RSS_TIMEOUT_MS * 2, "Anthropic Blog"),
     ]),
   ]);
 
   const items: FeedItem[] = [];
 
+  // RSS sources
   for (const [index, result] of rssResults.entries()) {
     if (result.status === "rejected") {
       console.error(
-        `[fetchAllFeeds] "${sources[index].name}" failed — continuing silently:`,
+        `[fetchAllFeeds] "${sources[index].name}" failed — continuing:`,
         (result.reason as Error).message
       );
       continue;
@@ -160,15 +167,21 @@ export async function fetchAllFeeds(): Promise<FeedItem[]> {
     items.push(...result.value);
   }
 
-  const nvd = nvdResult[0];
-  if (nvd.status === "fulfilled") {
-    items.push(...nvd.value);
+  // GitHub Trending
+  const gh = githubResult[0];
+  if (gh.status === "fulfilled") {
+    items.push(...gh.value);
   } else {
-    console.error(
-      "[fetchAllFeeds] NVD API failed — continuing silently:",
-      (nvd.reason as Error).message
-    );
+    console.error("[fetchAllFeeds] GitHub Trending failed:", (gh.reason as Error).message);
   }
 
-  return items.sort(sortItems).slice(0, LIMIT);
+  // Anthropic Blog
+  const anthropic = anthropicResult[0];
+  if (anthropic.status === "fulfilled") {
+    items.push(...anthropic.value);
+  } else {
+    console.error("[fetchAllFeeds] Anthropic Blog failed:", (anthropic.reason as Error).message);
+  }
+
+  return items.sort(sortItems).slice(0, FEED_LIMIT);
 }
