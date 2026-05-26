@@ -5,7 +5,6 @@ import type { SignalLevel } from "../rss/filterNews";
 import type { SourceType } from "../rss/sources";
 import type { ResearchBrief } from "../ai/research";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,7 +109,7 @@ const oneDayAgo = () => {
 
 // ─── Main query ───────────────────────────────────────────────────────────────
 
-export async function getHomeDashboard(): Promise<DashboardData> {
+export async function getHomeDashboard(userId: string): Promise<DashboardData> {
   const week = sevenDaysAgo();
   const day  = oneDayAgo();
 
@@ -163,7 +162,7 @@ export async function getHomeDashboard(): Promise<DashboardData> {
     supabase
       .from("saved_articles")
       .select("article_id")
-      .eq("user_id", USER_ID)
+      .eq("user_id", userId)
       .eq("status", "saved")
       .order("updated_at", { ascending: false })
       .limit(10),

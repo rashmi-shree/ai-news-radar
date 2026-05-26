@@ -3,6 +3,7 @@ import { FolderOpen, FolderPlus, Layers } from "lucide-react";
 import { clsx } from "clsx";
 import Header from "@/components/Header";
 import { getCollections, type CollectionColor } from "@/src/lib/supabase/collections";
+import { getServerUserId } from "@/src/lib/supabase/server";
 import CreateCollectionButton from "@/components/CreateCollectionButton";
 
 // ─── Color config ──────────────────────────────────────────────────────────────
@@ -40,7 +41,8 @@ const COLOR_TEXT: Record<CollectionColor, string> = {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function CollectionsPage() {
-  const collections = await getCollections();
+  const userId = await getServerUserId();
+  const collections = await getCollections(userId);
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950">

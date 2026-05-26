@@ -1,6 +1,5 @@
 import { supabase } from "./client";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,14 +47,14 @@ type PrefRow = {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export async function getUserPreferences(): Promise<UserPreferences> {
+export async function getUserPreferences(userId: string): Promise<UserPreferences> {
   const { data, error } = await supabase
     .from("user_preferences")
     .select(
       "topics, notify_critical, notify_new_threats, notify_digest, " +
       "digest_frequency, realtime_enabled, risk_threshold"
     )
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
@@ -76,14 +75,14 @@ export async function getUserPreferences(): Promise<UserPreferences> {
   };
 }
 
-export async function saveUserPreferences(
+export async function saveUserPreferences(userId: string,
   prefs: UserPreferences
 ): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase
     .from("user_preferences")
     .upsert(
       {
-        user_id:            USER_ID,
+        user_id:            userId,
         topics:             prefs.topics,
         notify_critical:    prefs.notifyCritical,
         notify_new_threats: prefs.notifyNewThreats,

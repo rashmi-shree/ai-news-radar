@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -183,15 +184,17 @@ function WorkloadContent({ data }: { data: WorkloadData }) {
 }
 
 export default function WorkloadPanel() {
+  const { userId } = useAuth();
   const [data, setData]     = useState<WorkloadData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getWorkloadData().then((d) => {
+    if (!userId) return;
+    getWorkloadData(userId).then((d) => {
       setData(d);
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   const isEmpty = !loading && data?.openCount === 0;
 

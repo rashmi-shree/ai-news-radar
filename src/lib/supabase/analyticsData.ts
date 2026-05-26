@@ -1,6 +1,5 @@
 import { supabase } from "./client";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,7 +40,7 @@ export interface HeatmapData {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export async function getAnalyticsData(): Promise<AnalyticsData> {
+export async function getAnalyticsData(userId: string): Promise<AnalyticsData> {
   const [scoreRes, categoryRes, statusRes] = await Promise.allSettled([
     // All non-null builder scores
     supabase
@@ -58,7 +57,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     supabase
       .from("saved_articles")
       .select("article_id, status")
-      .eq("user_id", USER_ID)
+      .eq("user_id", userId)
       .order("updated_at", { ascending: false, nullsFirst: false }),
   ]);
 
@@ -140,7 +139,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
 
 // ─── Heatmap query ────────────────────────────────────────────────────────────
 
-export async function getHeatmapData(): Promise<HeatmapData> {
+export async function getHeatmapData(userId: string): Promise<HeatmapData> {
   const RISK_LEVELS = ["High", "Medium", "Low"] as const;
   const empty: HeatmapData = { categories: [], riskLevels: [...RISK_LEVELS], grid: {}, maxCount: 0 };
 

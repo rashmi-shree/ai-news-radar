@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import {
   BarChart,
   Bar,
@@ -290,15 +291,17 @@ function CategoryChart({ data }: { data: AnalyticsData["categoryBreakdown"] }) {
 // ─── Main section ─────────────────────────────────────────────────────────────
 
 export default function AnalyticsCharts() {
+  const { userId } = useAuth();
   const [data, setData]     = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAnalyticsData().then((d) => {
+    if (!userId) return;
+    getAnalyticsData(userId).then((d) => {
       setData(d);
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   return (
     <section className="mb-12">

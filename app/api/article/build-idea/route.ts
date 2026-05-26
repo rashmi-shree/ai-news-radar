@@ -1,10 +1,14 @@
 import { supabase } from "@/src/lib/supabase/client";
 import { generateBuildIdea } from "@/src/lib/ai/buildIdea";
 import { saveBuildIdea, getBuildIdea } from "@/src/lib/supabase/builderActions";
+import { getServerUser } from "@/src/lib/supabase/server";
 
 // ─── GET /api/article/build-idea?articleId={id} ───────────────────────────────
 
 export async function GET(request: Request) {
+  const user = await getServerUser();
+  if (!user) return Response.json({ ok: false, error: "Unauthenticated" }, { status: 401 });
+
   const { searchParams } = new URL(request.url);
   const articleId = searchParams.get("articleId");
 
@@ -12,13 +16,16 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, error: "Missing articleId" }, { status: 400 });
   }
 
-  const idea = await getBuildIdea(articleId);
+  const idea = await getBuildIdea(user.id, articleId);
   return Response.json({ ok: true, idea });
 }
 
 // ─── POST /api/article/build-idea ─────────────────────────────────────────────
 
 export async function POST(request: Request) {
+  const user = await getServerUser();
+  if (!user) return Response.json({ ok: false, error: "Unauthenticated" }, { status: 401 });
+
   let body: { articleId?: string };
   try {
     body = await request.json();
@@ -63,7 +70,7 @@ export async function POST(request: Request) {
   }
 
   // Store in builder_actions
-  const { ok, error: saveError } = await saveBuildIdea(articleId, idea);
+  const { ok, error: saveError } = await saveBuildIdea(user.id, articleId, idea);
   if (!ok) {
     // Return idea even if save fails
     console.error("[BUILD IDEA] Save failed:", saveError);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import {
   Bell,
   Check,
@@ -139,6 +140,7 @@ function PrefSkeleton() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PreferencesPage() {
+  const { userId } = useAuth();
   const [loading,    setLoading]    = useState(true);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [toasts,     setToasts]     = useState<Toast[]>([]);
@@ -163,7 +165,8 @@ export default function PreferencesPage() {
 
   // ── Load ──
   useEffect(() => {
-    getUserPreferences().then((prefs) => {
+    if (!userId) return;
+    getUserPreferences(userId).then((prefs) => {
       setTopics(prefs.topics);
       setNotifyCritical(prefs.notifyCritical);
       setNotifyNewThreats(prefs.notifyNewThreats);
@@ -174,7 +177,7 @@ export default function PreferencesPage() {
       savedRef.current = JSON.stringify(prefs);
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   // ── Topic toggle ──
   function toggleTopic(id: string) {
@@ -203,7 +206,8 @@ export default function PreferencesPage() {
     if (saveStatus === "saving") return;
     setSaveStatus("saving");
     const prefs = snapshot();
-    const result = await saveUserPreferences(prefs);
+    if (!userId) return;
+    const result = await saveUserPreferences(userId, prefs);
     if (result.ok) {
       savedRef.current = JSON.stringify(prefs);
       setSaveStatus("saved");

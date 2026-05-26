@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { Grid2x2 } from "lucide-react";
 import { clsx } from "clsx";
 import { getHeatmapData, type HeatmapData } from "@/src/lib/supabase/analyticsData";
@@ -232,15 +233,17 @@ function SkeletonGrid() {
 }
 
 export default function HeatmapWidget() {
+  const { userId } = useAuth();
   const [data, setData]     = useState<HeatmapData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getHeatmapData().then((d) => {
+    if (!userId) return;
+    getHeatmapData(userId).then((d) => {
       setData(d);
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   const isEmpty = !loading && (!data?.categories.length);
 

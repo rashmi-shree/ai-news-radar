@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import {
   Bookmark,
@@ -133,6 +134,7 @@ async function postAction(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ThreatActions({ articleId }: { articleId: string }) {
+  const { userId } = useAuth();
   const router = useRouter();
 
   const [current, setCurrent]           = useState<WorkspaceStatus | null>(null);
@@ -143,11 +145,12 @@ export default function ThreatActions({ articleId }: { articleId: string }) {
 
   // Load current status from DB on mount
   useEffect(() => {
-    getArticleStatus(articleId).then((s) => {
+    if (!userId) return;
+    getArticleStatus(userId, articleId).then((s) => {
       setCurrent(s);
       setInitializing(false);
     });
-  }, [articleId]);
+  }, [userId, articleId]);
 
   function addToast(message: string, type: ToastState["type"] = "success") {
     const id = ++toastCounter.current;

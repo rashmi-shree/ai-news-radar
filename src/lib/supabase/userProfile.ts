@@ -1,6 +1,5 @@
 import { supabase } from "./client";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,11 +29,11 @@ type ProfileRow = {
  * Loads the profile for the local user.
  * Returns null if no profile has been saved yet.
  */
-export async function getUserProfile(): Promise<UserProfile | null> {
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from("user_profiles")
     .select("role, company, domain, tools, favorite_topics")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .limit(1)
     .maybeSingle();
 
@@ -59,12 +58,12 @@ export async function getUserProfile(): Promise<UserProfile | null> {
  * Upserts the profile for the local user.
  * Creates on first save, updates on subsequent saves.
  */
-export async function saveUserProfile(profile: UserProfile): Promise<{ ok: boolean; error?: string }> {
+export async function saveUserProfile(userId: string, profile: UserProfile): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase
     .from("user_profiles")
     .upsert(
       {
-        user_id:         USER_ID,
+        user_id:         userId,
         role:            profile.role.trim()    || null,
         company:         profile.company.trim() || null,
         domain:          profile.domain.trim()  || null,

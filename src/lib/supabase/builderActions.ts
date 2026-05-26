@@ -15,17 +15,16 @@ export interface BuilderAction {
   updatedAt:  string;
 }
 
-const USER_ID = "local-user";
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
-export async function getBuildIdea(
+export async function getBuildIdea(userId: string,
   articleId: string
 ): Promise<BuildIdea | null> {
   const { data, error } = await supabase
     .from("builder_actions")
     .select("payload")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .eq("article_id", articleId)
     .eq("type", "build")
     .order("updated_at", { ascending: false })
@@ -38,7 +37,7 @@ export async function getBuildIdea(
 
 // ─── Write ────────────────────────────────────────────────────────────────────
 
-export async function saveBuildIdea(
+export async function saveBuildIdea(userId: string,
   articleId: string,
   idea:      BuildIdea
 ): Promise<{ ok: boolean; error?: string }> {
@@ -48,7 +47,7 @@ export async function saveBuildIdea(
     .from("builder_actions")
     .upsert(
       {
-        user_id:    USER_ID,
+        user_id:    userId,
         article_id: articleId,
         type:       "build",
         payload:    idea,

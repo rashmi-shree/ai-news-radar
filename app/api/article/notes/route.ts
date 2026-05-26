@@ -1,6 +1,5 @@
 import { supabase } from "@/src/lib/supabase/client";
-
-const USER_ID = "local-user";
+import { getServerUser } from "@/src/lib/supabase/server";
 
 /**
  * PATCH /api/article/notes
@@ -13,6 +12,12 @@ const USER_ID = "local-user";
  * the user to track the article first.
  */
 export async function PATCH(request: Request) {
+  const user = await getServerUser();
+  if (!user) {
+    return Response.json({ ok: false, error: "Unauthenticated" }, { status: 401 });
+  }
+  const userId = user.id;
+
   let body: { articleId?: string; notes?: string };
 
   try {
@@ -35,7 +40,7 @@ export async function PATCH(request: Request) {
     .from("saved_articles")
     .select("id")
     .eq("article_id", articleId)
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .limit(1);
 
   if (!existing?.length) {
@@ -49,7 +54,7 @@ export async function PATCH(request: Request) {
     .from("saved_articles")
     .update({ notes: notes.trim() || null, updated_at: new Date().toISOString() })
     .eq("article_id", articleId)
-    .eq("user_id", USER_ID);
+    .eq("user_id", userId);
 
   if (error) {
     console.error("[NOTES] update failed:", error.message);

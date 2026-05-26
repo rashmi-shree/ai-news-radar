@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import {
   Activity,
   Bookmark,
@@ -168,15 +169,17 @@ const CARD_DEFS: (Omit<StatCardProps, "value"> & { key: keyof DashboardStats })[
 ];
 
 export default function DashboardSection() {
+  const { userId } = useAuth();
   const [stats, setStats]   = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getDashboardStats().then((s) => {
+    if (!userId) return;
+    getDashboardStats(userId).then((s) => {
       setStats(s);
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   return (
     <section className="mb-12">

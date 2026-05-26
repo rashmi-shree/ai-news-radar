@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import Fuse, { type IFuseOptions, type FuseResultMatch } from "fuse.js";
 import {
   CheckCircle2,
@@ -101,9 +102,9 @@ const FUSE_OPTIONS: IFuseOptions<NewsItem> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function loadInterests(): Promise<string[]> {
+async function loadInterests(userId: string): Promise<string[]> {
   try {
-    const remote = await getInterests();
+    const remote = await getInterests(userId);
     if (remote.length > 0) {
       return remote;
     }
@@ -136,6 +137,8 @@ function getMatchRanges(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function FeedPage() {
+  const { userId } = useAuth();
+
   // ── Core feed state ──
   const [items, setItems] = useState<NewsItem[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
@@ -195,7 +198,7 @@ export default function FeedPage() {
     setItems(sorted);
 
     // Persist behavior_score + final_score per article (fire-and-forget)
-    void upsertArticleScores(buildScoreRows(articles, scoreMap));
+    if (userId) void upsertArticleScores(userId, buildScoreRows(articles, scoreMap));
   }
 
   // ─── Realtime subscription ────────────────────────────────────────────────
@@ -286,7 +289,7 @@ export default function FeedPage() {
         "postgres_changes",
         { event: "*", schema: "public", table: "saved_articles" },
         () => {
-          getSavedStatuses().then(setSavedStatuses);
+          if (userId) getSavedStatuses(userId).then(setSavedStatuses);
         }
       )
       .subscribe();
@@ -299,13 +302,14 @@ export default function FeedPage() {
     setStatus("loading");
 
     try {
+      const uid = userId ?? "";
       const [fetchResult, userInterests, behaviorRows] = await Promise.all([
         fetch("/api/news").then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json() as Promise<{ ok: boolean; items: NewsItem[] }>;
         }),
-        loadInterests(),
-        getBehaviorHistory(500),
+        loadInterests(uid),
+        uid ? getBehaviorHistory(uid, 500) : Promise.resolve([]),
       ]);
 
       const { items: fetched } = fetchResult;
@@ -320,7 +324,7 @@ export default function FeedPage() {
       setStatus("success");
 
       // Load workspace status badges (non-blocking)
-      getSavedStatuses().then(setSavedStatuses);
+      if (userId) getSavedStatuses(userId).then(setSavedStatuses);
     } catch (err) {
       console.error("[FeedPage]", err);
       setStatus("error");

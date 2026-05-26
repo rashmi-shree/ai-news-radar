@@ -1,6 +1,5 @@
 import { supabase } from "./client";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,7 +60,7 @@ function buildMetric(
  * keeping the network round-trips to just 2 queries regardless of how many
  * periods/metrics we need.
  */
-export async function getTrendData(): Promise<PeriodTrend[]> {
+export async function getTrendData(userId: string): Promise<PeriodTrend[]> {
   const windowHours = 60 * 24; // 60-day look-back covers all three periods
   const since = hoursAgo(windowHours);
 
@@ -74,7 +73,7 @@ export async function getTrendData(): Promise<PeriodTrend[]> {
     supabase
       .from("saved_articles")
       .select("article_id, updated_at")
-      .eq("user_id", USER_ID)
+      .eq("user_id", userId)
       .eq("status", "investigating")
       .gte("updated_at", since),
   ]);

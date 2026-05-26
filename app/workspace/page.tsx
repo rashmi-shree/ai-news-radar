@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -611,6 +612,7 @@ function ActivityTimeline({ entries }: { entries: ActivityEntry[] }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function WorkspacePage() {
+  const { userId } = useAuth();
   const [items, setItems]                   = useState<WorkspaceItem[]>([]);
   const [counts, setCounts]                 = useState<Record<WorkspaceStatus, number>>({
     saved: 0, investigating: 0, reviewed: 0, ignored: 0,
@@ -624,9 +626,10 @@ export default function WorkspacePage() {
 
   const loadWorkspace = useCallback(async () => {
     // Load entries and recent activity in parallel
+    const uid = userId ?? "";
     const [entries, recentActivity] = await Promise.all([
-      getWorkspaceEntries(),
-      getRecentActivity(),
+      getWorkspaceEntries(uid),
+      getRecentActivity(uid),
     ]);
 
     setActivity(recentActivity);

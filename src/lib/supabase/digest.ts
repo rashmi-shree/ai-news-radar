@@ -1,7 +1,6 @@
 import { supabase } from "./client";
 import { getRecommendedAction } from "@/src/lib/scoring/threatScore";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,7 +70,7 @@ function ageLabel(ms: number): string {
 
 // ─── Query ────────────────────────────────────────────────────────────────────
 
-export async function getDigestData(): Promise<DigestData> {
+export async function getDigestData(userId: string): Promise<DigestData> {
   const now = Date.now();
 
   const [articlesResult, savedResult] = await Promise.allSettled([
@@ -86,7 +85,7 @@ export async function getDigestData(): Promise<DigestData> {
     supabase
       .from("saved_articles")
       .select("article_id, status, updated_at")
-      .eq("user_id", USER_ID)
+      .eq("user_id", userId)
       .order("updated_at", { ascending: false }),
   ]);
 

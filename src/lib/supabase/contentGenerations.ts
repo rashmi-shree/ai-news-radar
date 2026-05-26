@@ -1,18 +1,17 @@
 import { supabase } from "./client";
 import type { ContentType, ContentGeneration } from "../ai/contentGeneration";
 
-const USER_ID = "local-user";
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
-export async function getContentGeneration(
+export async function getContentGeneration(userId: string,
   articleId: string,
   type:      ContentType
 ): Promise<ContentGeneration | null> {
   const { data, error } = await supabase
     .from("content_generations")
     .select("type, hook, body, cta, generated_at")
-    .eq("user_id",    USER_ID)
+    .eq("user_id",    userId)
     .eq("article_id", articleId)
     .eq("type",       type)
     .maybeSingle();
@@ -37,13 +36,13 @@ export async function getContentGeneration(
 }
 
 /** Returns all generated content types for an article in one query. */
-export async function getAllContentGenerations(
+export async function getAllContentGenerations(userId: string,
   articleId: string
 ): Promise<Partial<Record<ContentType, ContentGeneration>>> {
   const { data, error } = await supabase
     .from("content_generations")
     .select("type, hook, body, cta, generated_at")
-    .eq("user_id",    USER_ID)
+    .eq("user_id",    userId)
     .eq("article_id", articleId);
 
   if (error || !data) return {};
@@ -57,7 +56,7 @@ export async function getAllContentGenerations(
 
 // ─── Write ────────────────────────────────────────────────────────────────────
 
-export async function saveContentGeneration(
+export async function saveContentGeneration(userId: string,
   articleId: string,
   content:   ContentGeneration
 ): Promise<{ ok: boolean; error?: string }> {
@@ -67,7 +66,7 @@ export async function saveContentGeneration(
     .from("content_generations")
     .upsert(
       {
-        user_id:      USER_ID,
+        user_id:      userId,
         article_id:   articleId,
         type:         content.type,
         hook:         content.hook,

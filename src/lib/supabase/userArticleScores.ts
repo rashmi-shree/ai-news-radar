@@ -1,7 +1,6 @@
 import { supabase } from "./client";
 import type { ScoreComponents } from "@/src/lib/recommendation/feedScoring";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,13 +18,13 @@ export interface ArticleScoreRow {
  * Designed for fire-and-forget — never throws.
  * Only persists articles with a Supabase UUID (id is required for the FK).
  */
-export async function upsertArticleScores(
+export async function upsertArticleScores(userId: string,
   rows: ArticleScoreRow[]
 ): Promise<void> {
   if (rows.length === 0) return;
 
   const payload = rows.map((r) => ({
-    user_id:        USER_ID,
+    user_id:        userId,
     article_id:     r.articleId,
     behavior_score: r.behaviorScore,
     final_score:    r.finalScore,

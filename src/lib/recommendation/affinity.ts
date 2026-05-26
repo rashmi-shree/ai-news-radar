@@ -93,9 +93,9 @@ export function computeAffinityFromHistory(rows: BehaviorRow[]): AffinityResult 
  * Loads behavior history and returns normalised affinity.
  * Used by the workspace / analytics layer.
  */
-export async function getInterestAffinity(): Promise<AffinityResult> {
+export async function getInterestAffinity(userId: string): Promise<AffinityResult> {
   try {
-    const rows = await getBehaviorHistory(500);
+    const rows = await getBehaviorHistory(userId, 500);
     if (rows.length === 0) return { map: new Map(), topCategories: [] };
 
     return computeAffinityFromHistory(rows);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import {
   Activity,
@@ -118,6 +119,7 @@ type Step = "role" | "context" | "topics" | "generating";
 // ─── Seed initial behavior ────────────────────────────────────────────────────
 
 async function seedInitialBehavior(
+  userId: string,
   selectedTopics: string[],
   selectedRole: Role
 ): Promise<void> {
@@ -143,7 +145,7 @@ async function seedInitialBehavior(
     if (!data?.length) continue;
 
     for (const article of data as { id: string }[]) {
-      await logBehavior(article.id, "view");
+      await logBehavior(userId, article.id, "view");
     }
   }
 }
@@ -261,6 +263,7 @@ function GeneratingScreen({ progress }: { progress: string }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
+  const { userId } = useAuth();
   const router = useRouter();
 
   // ── Step state ──
@@ -307,11 +310,13 @@ export default function OnboardingPage() {
 
       setProgress("Saving your profile…");
 
+      const uid = userId ?? "";
+
       // 2. Save user_interests
-      await saveInterests(topicList).catch(console.error);
+      await saveInterests(uid, topicList).catch(console.error);
 
       // 3. Save user_profiles
-      await saveUserProfile({
+      await saveUserProfile(uid, {
         role:            selectedRole?.label ?? "",
         company:         company,
         domain:          domain,
@@ -322,7 +327,7 @@ export default function OnboardingPage() {
       setProgress("Saving your preferences…");
 
       // 4. Save user_preferences (topics + defaults)
-      await saveUserPreferences({
+      await saveUserPreferences(uid, {
         ...DEFAULT_PREFERENCES,
         topics: topicList,
       }).catch(console.error);
@@ -331,7 +336,7 @@ export default function OnboardingPage() {
 
       // 5. Seed initial behavior signals for fast affinity warm-up
       if (selectedRole) {
-        await seedInitialBehavior(topicList, selectedRole).catch(console.error);
+        await seedInitialBehavior(uid, topicList, selectedRole).catch(console.error);
       }
 
       setProgress("All done — loading your feed");

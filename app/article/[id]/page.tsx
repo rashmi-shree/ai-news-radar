@@ -25,6 +25,7 @@ import ArticleViewLogger from "@/components/ArticleViewLogger";
 import { getBuildIdea } from "@/src/lib/supabase/builderActions";
 import { getAllContentGenerations } from "@/src/lib/supabase/contentGenerations";
 import { getArticleById, getRelatedArticles } from "@/src/lib/supabase/articles";
+import { getServerUser } from "@/src/lib/supabase/server";
 import type { FeedItem } from "@/src/lib/rss/fetchFeeds";
 import type { RiskLevel } from "@/src/lib/ai/types";
 import type { SignalLevel } from "@/src/lib/rss/filterNews";
@@ -466,10 +467,13 @@ export default async function ArticlePage({
   const article = await getArticleById(id);
   if (!article) notFound();
 
+  const user = await getServerUser();
+  const userId = user?.id ?? "local-user";
+
   const [related, initialBuildIdea, initialContent] = await Promise.all([
     getRelatedArticles(article.category, article.intelligence.risk_level, id),
-    getBuildIdea(id),
-    getAllContentGenerations(id),
+    getBuildIdea(userId, id),
+    getAllContentGenerations(userId, id),
   ]);
 
   const risk = (article.intelligence.risk_level ?? "low") as RiskLevel;

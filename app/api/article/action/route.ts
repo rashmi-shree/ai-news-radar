@@ -1,5 +1,6 @@
 import { supabase } from "@/src/lib/supabase/client";
 import { logBehavior, type BehaviorEvent } from "@/src/lib/supabase/userBehavior";
+import { getServerUser } from "@/src/lib/supabase/server";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,28 +22,21 @@ const ANALYST_TO_BEHAVIOR: Record<Exclude<AnalystAction, "remove">, BehaviorEven
   ignored:       "ignored",
 };
 
-const USER_ID = "local-user";
-
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 /**
  * POST /api/article/action
  *
  * Payload: { articleId: string; action: AnalystAction }
- *
- * Strategy — delete-then-insert:
- *   1. DELETE all rows for (article_id, user_id)  →  clears duplicates.
- *   2. For status actions: INSERT one fresh row.
- *   3. For "remove": step 1 is the complete operation.
- *
- * If the insert fails after delete, the previous row is restored so the
- * article is never silently lost from the workspace.
- *
- * One article = one status. No unique DB constraint required.
  */
 export async function POST(request: Request) {
-  let body: { articleId?: string; action?: string };
+  const user = await getServerUser();
+  if (!user) {
+    return Response.json({ ok: false, error: "Unauthenticated" }, { status: 401 });
+  }
+  const userId = user.id;
 
+  let body: { articleId?: string; action?: string };
   try {
     body = await request.json();
   } catch {
@@ -61,12 +55,12 @@ export async function POST(request: Request) {
   const typedAction = action as AnalystAction;
   const now = new Date().toISOString();
 
-  // ── 1. Read the existing row before deleting (needed for rollback + notes preservation) ──
+  // ── 1. Read the existing row before deleting (needed for rollback + notes) ──
   const { data: existing } = await supabase
     .from("saved_articles")
     .select("article_id, user_id, action, status, notes, created_at, updated_at")
     .eq("article_id", articleId)
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .order("updated_at", { ascending: false, nullsFirst: false })
     .limit(1);
 
@@ -77,7 +71,7 @@ export async function POST(request: Request) {
     .from("saved_articles")
     .delete()
     .eq("article_id", articleId)
-    .eq("user_id", USER_ID);
+    .eq("user_id", userId);
 
   if (deleteError) {
     console.error("[ACTION] delete failed:", deleteError.message);
@@ -86,8 +80,8 @@ export async function POST(request: Request) {
 
   // ── 3. Remove — delete was the complete operation ─────────────────────────
   if (typedAction === "remove") {
-    void logAction(articleId, "removed");
-    void logBehavior(articleId, "removed");
+    void logAction(userId, articleId, "removed");
+    void logBehavior(userId, articleId, "removed");
     return Response.json({ ok: true, status: null });
   }
 
@@ -96,44 +90,35 @@ export async function POST(request: Request) {
     .from("saved_articles")
     .insert({
       article_id:  articleId,
-      user_id:     USER_ID,
+      user_id:     userId,
       action:      typedAction,
       status:      typedAction,
-      notes:       previousRow?.notes ?? null,   // carry notes forward across status changes
+      notes:       previousRow?.notes ?? null,
       created_at:  previousRow?.created_at ?? now,
       updated_at:  now,
     });
 
   if (insertError) {
     console.error("[ACTION] insert failed:", insertError.message);
-
-    // Restore the previous row so the article is not silently lost
     if (previousRow) {
       await supabase.from("saved_articles").insert({
         ...previousRow,
         updated_at: previousRow.updated_at ?? previousRow.created_at,
       });
-      console.warn(`[ACTION] rolled back to previous status="${previousRow.status}" for article=${articleId}`);
     }
-
     return Response.json({ ok: false, error: insertError.message }, { status: 500 });
   }
 
-  void logAction(articleId, typedAction);
-  void logBehavior(articleId, ANALYST_TO_BEHAVIOR[typedAction]);
+  void logAction(userId, articleId, typedAction);
+  void logBehavior(userId, articleId, ANALYST_TO_BEHAVIOR[typedAction]);
   return Response.json({ ok: true, status: typedAction });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Fire-and-forget: append an entry to the threat_actions audit log. */
-async function logAction(articleId: string, action: string): Promise<void> {
+async function logAction(userId: string, articleId: string, action: string): Promise<void> {
   const { error } = await supabase
     .from("threat_actions")
-    .insert({ article_id: articleId, user_id: USER_ID, action });
-
-  if (error) {
-    console.warn("[ACTION LOG] threat_actions insert failed:", error.message);
-  }
+    .insert({ article_id: articleId, user_id: userId, action });
+  if (error) console.warn("[ACTION LOG] threat_actions insert failed:", error.message);
 }
-

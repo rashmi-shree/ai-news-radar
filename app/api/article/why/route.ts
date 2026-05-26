@@ -1,8 +1,8 @@
 import { supabase } from "@/src/lib/supabase/client";
 import { getUserProfile } from "@/src/lib/supabase/userProfile";
 import { TOPIC_KEYWORDS } from "@/src/lib/personalization";
+import { getServerUser } from "@/src/lib/supabase/server";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +67,10 @@ const SCORE_BAR_DEFS: Array<{ key: string; label: string; max: number; color: st
 // ─── GET /api/article/why?articleId= ─────────────────────────────────────────
 
 export async function GET(request: Request) {
+  const user = await getServerUser();
+  if (!user) return Response.json({ ok: false, error: "Unauthenticated" }, { status: 401 });
+  const userId = user.id;
+
   const { searchParams } = new URL(request.url);
   const articleId = searchParams.get("articleId");
   if (!articleId) return Response.json({ ok: false, error: "Missing articleId" }, { status: 400 });
@@ -84,12 +88,12 @@ export async function GET(request: Request) {
       .eq("id", articleId)
       .maybeSingle(),
 
-    getUserProfile(),
+    getUserProfile(userId),
 
     supabase
       .from("saved_articles")
       .select("article_id, status")
-      .eq("user_id", USER_ID)
+      .eq("user_id", userId)
       .in("status", ["saved", "investigating", "reviewed"]),
   ]);
 

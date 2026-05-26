@@ -1,6 +1,5 @@
 import { supabase } from "./client";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,7 +14,7 @@ export interface DashboardStats {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(userId: string): Promise<DashboardStats> {
   const zero: DashboardStats = {
     totalThreats: 0, criticalThreats: 0, avgThreatScore: 0,
     openInvestigations: 0, reviewedToday: 0, savedItems: 0,
@@ -49,7 +48,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     supabase
       .from("saved_articles")
       .select("article_id, status, updated_at")
-      .eq("user_id", USER_ID)
+      .eq("user_id", userId)
       .order("updated_at", { ascending: false, nullsFirst: false }),
   ]);
 

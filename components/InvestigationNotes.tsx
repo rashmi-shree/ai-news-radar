@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { clsx } from "clsx";
 import { getArticleNotes } from "@/src/lib/supabase/savedArticles";
@@ -30,6 +31,7 @@ const MAX_CHARS = 1000;
 const AUTOSAVE_MS = 1200; // debounce after user stops typing
 
 export default function InvestigationNotes({ articleId }: { articleId: string }) {
+  const { userId } = useAuth();
   const [notes, setNotes]             = useState("");
   const [saveState, setSaveState]     = useState<SaveState>("idle");
   const [tracked, setTracked]         = useState<boolean | null>(null); // null = loading
@@ -38,12 +40,13 @@ export default function InvestigationNotes({ articleId }: { articleId: string })
 
   // ── Load existing notes on mount ──
   useEffect(() => {
-    getArticleNotes(articleId).then(({ notes: existing, status }) => {
+    if (!userId) return;
+    getArticleNotes(userId, articleId).then(({ notes: existing, status }) => {
       setTracked(status !== null);
       setNotes(existing ?? "");
       lastSaved.current = existing ?? "";
     });
-  }, [articleId]);
+  }, [userId, articleId]);
 
   // ── Save function ──
   const save = useCallback(async (text: string) => {

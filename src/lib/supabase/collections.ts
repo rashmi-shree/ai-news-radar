@@ -1,6 +1,5 @@
 import { supabase } from "./client";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,14 +25,14 @@ export interface CollectionArticle {
 
 // ─── Collection CRUD ─────────────────────────────────────────────────────────
 
-export async function getCollections(): Promise<UserCollection[]> {
+export async function getCollections(userId: string): Promise<UserCollection[]> {
   const { data, error } = await supabase
     .from("user_collections")
     .select(`
       id, user_id, name, description, color, created_at, updated_at,
       collection_articles(count)
     `)
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
   if (error || !data) return [];
@@ -59,12 +58,12 @@ export async function getCollections(): Promise<UserCollection[]> {
   }));
 }
 
-export async function getCollectionById(id: string): Promise<UserCollection | null> {
+export async function getCollectionById(userId: string, id: string): Promise<UserCollection | null> {
   const { data, error } = await supabase
     .from("user_collections")
     .select("id, user_id, name, description, color, created_at, updated_at")
     .eq("id", id)
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error || !data) return null;
@@ -90,14 +89,14 @@ export async function getCollectionById(id: string): Promise<UserCollection | nu
   };
 }
 
-export async function createCollection(
+export async function createCollection(userId: string,
   name:        string,
   description: string | null = null,
   color:       CollectionColor = "zinc"
 ): Promise<{ ok: boolean; collection?: UserCollection; error?: string }> {
   const { data, error } = await supabase
     .from("user_collections")
-    .insert({ user_id: USER_ID, name: name.trim(), description, color })
+    .insert({ user_id: userId, name: name.trim(), description, color })
     .select("id, user_id, name, description, color, created_at, updated_at")
     .single();
 
@@ -128,7 +127,7 @@ export async function createCollection(
   };
 }
 
-export async function updateCollection(
+export async function updateCollection(userId: string,
   id:      string,
   updates: { name?: string; description?: string | null; color?: CollectionColor }
 ): Promise<{ ok: boolean; error?: string }> {
@@ -136,18 +135,18 @@ export async function updateCollection(
     .from("user_collections")
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("user_id", USER_ID);
+    .eq("user_id", userId);
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
 
-export async function deleteCollection(id: string): Promise<{ ok: boolean; error?: string }> {
+export async function deleteCollection(userId: string, id: string): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase
     .from("user_collections")
     .delete()
     .eq("id", id)
-    .eq("user_id", USER_ID);
+    .eq("user_id", userId);
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };
@@ -156,38 +155,38 @@ export async function deleteCollection(id: string): Promise<{ ok: boolean; error
 // ─── Article membership ───────────────────────────────────────────────────────
 
 /** Which collection IDs contain a given article (for this user). */
-export async function getArticleCollectionIds(articleId: string): Promise<string[]> {
+export async function getArticleCollectionIds(userId: string, articleId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from("collection_articles")
     .select("collection_id")
     .eq("article_id", articleId)
-    .eq("user_id", USER_ID);
+    .eq("user_id", userId);
 
   if (error || !data) return [];
   return (data as Array<{ collection_id: string }>).map((r) => r.collection_id);
 }
 
 /** Articles inside a collection, newest first. Returns minimal article rows. */
-export async function getCollectionArticleIds(collectionId: string): Promise<string[]> {
+export async function getCollectionArticleIds(userId: string, collectionId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from("collection_articles")
     .select("article_id")
     .eq("collection_id", collectionId)
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .order("added_at", { ascending: false });
 
   if (error || !data) return [];
   return (data as Array<{ article_id: string }>).map((r) => r.article_id);
 }
 
-export async function addArticleToCollection(
+export async function addArticleToCollection(userId: string,
   collectionId: string,
   articleId:    string
 ): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase
     .from("collection_articles")
     .upsert(
-      { collection_id: collectionId, article_id: articleId, user_id: USER_ID },
+      { collection_id: collectionId, article_id: articleId, user_id: userId },
       { onConflict: "collection_id,article_id" }
     );
 
@@ -202,7 +201,7 @@ export async function addArticleToCollection(
   return { ok: true };
 }
 
-export async function removeArticleFromCollection(
+export async function removeArticleFromCollection(userId: string,
   collectionId: string,
   articleId:    string
 ): Promise<{ ok: boolean; error?: string }> {
@@ -211,19 +210,19 @@ export async function removeArticleFromCollection(
     .delete()
     .eq("collection_id", collectionId)
     .eq("article_id",    articleId)
-    .eq("user_id",       USER_ID);
+    .eq("user_id",       userId);
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
 
 /** Move: removes from fromId, adds to toId — atomic via sequential calls. */
-export async function moveArticleBetweenCollections(
+export async function moveArticleBetweenCollections(userId: string,
   fromCollectionId: string,
   toCollectionId:   string,
   articleId:        string
 ): Promise<{ ok: boolean; error?: string }> {
-  const rem = await removeArticleFromCollection(fromCollectionId, articleId);
+  const rem = await removeArticleFromCollection(userId, fromCollectionId, articleId);
   if (!rem.ok) return rem;
-  return addArticleToCollection(toCollectionId, articleId);
+  return addArticleToCollection(userId, toCollectionId, articleId);
 }

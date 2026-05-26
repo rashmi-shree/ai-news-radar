@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Layers, Menu, Radar, UserCircle2, X, Zap } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Layers, LogOut, Menu, Radar, UserCircle2, X, Zap } from "lucide-react";
 import { clsx } from "clsx";
+import { useAuth } from "@/components/AuthProvider";
 
 const NAV_LINKS = [
   { href: "/feed",               label: "Feed",        icon: null },
@@ -17,7 +18,15 @@ const NAV_LINKS = [
 
 export default function Header() {
   const pathname = usePathname();
+  const router   = useRouter();
   const [open, setOpen] = useState(false);
+  const { user, signOut } = useAuth();
+
+  async function handleSignOut() {
+    setOpen(false);
+    await signOut();
+    router.push("/login");
+  }
 
   return (
     <>
@@ -34,9 +43,9 @@ export default function Header() {
           {/* Desktop nav */}
           <nav className="hidden items-center gap-4 lg:flex">
             {NAV_LINKS.map(({ href, label, icon: Icon, iconClass }) => {
-              const isProfile = href === "/settings/profile";
+              const isProfile   = href === "/settings/profile";
               const isInterests = href === "/onboarding";
-              const isActive = pathname === href || pathname.startsWith(href + "/");
+              const isActive    = pathname === href || pathname.startsWith(href + "/");
               if (isProfile || isInterests) {
                 return (
                   <Link
@@ -68,6 +77,32 @@ export default function Header() {
                 </Link>
               );
             })}
+
+            {/* User + logout (desktop) */}
+            {user && (
+              <div className="ml-1 flex items-center gap-2 border-l border-zinc-800 pl-3">
+                <span className="max-w-[120px] truncate text-[11px] text-zinc-500" title={user.email ?? ""}>
+                  {user.email}
+                </span>
+                <button
+                  onClick={handleSignOut}
+                  title="Sign out"
+                  className="flex h-6 w-6 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+                >
+                  <LogOut size={12} />
+                </button>
+              </div>
+            )}
+
+            {/* Login link (desktop, if not signed in) */}
+            {!user && (
+              <Link
+                href="/login"
+                className="rounded-md border border-cyan-500/40 px-3 py-1.5 text-xs font-medium text-cyan-400 transition-colors hover:border-cyan-400 hover:text-cyan-300"
+              >
+                Sign in
+              </Link>
+            )}
           </nav>
 
           {/* Mobile hamburger */}
@@ -120,6 +155,32 @@ export default function Header() {
                   </Link>
                 );
               })}
+            </div>
+
+            {/* User section (mobile drawer bottom) */}
+            <div className="mt-auto border-t border-zinc-800 px-3 py-4">
+              {user ? (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-xs text-zinc-500" title={user.email ?? ""}>
+                    {user.email}
+                  </span>
+                  <button
+                    onClick={handleSignOut}
+                    className="flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+                  >
+                    <LogOut size={12} />
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-cyan-500/40 px-4 py-2.5 text-sm font-medium text-cyan-400"
+                >
+                  Sign in
+                </Link>
+              )}
             </div>
           </nav>
         </div>

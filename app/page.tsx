@@ -25,6 +25,7 @@ import Header from "@/components/Header";
 import ArticleRow from "@/components/ArticleRow";
 import { getHomeDashboard } from "@/src/lib/supabase/homeDashboard";
 import { getUserProfile } from "@/src/lib/supabase/userProfile";
+import { getServerUser } from "@/src/lib/supabase/server";
 import type { FeedItem } from "@/src/lib/rss/fetchFeeds";
 
 // ─── Greeting ─────────────────────────────────────────────────────────────────
@@ -135,9 +136,12 @@ function TodayPill({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
+  const user = await getServerUser();
+  const userId = user?.id ?? "local-user";
+
   const [dashboard, profile] = await Promise.all([
-    getHomeDashboard(),
-    getUserProfile(),
+    getHomeDashboard(userId),
+    getUserProfile(userId),
   ]);
 
   const { pills, buildThisWeek, researchNext, createContent, savedItems } = dashboard;

@@ -10,6 +10,7 @@ import {
   type CollectionColor,
 } from "@/src/lib/supabase/collections";
 import { getArticlesByIds } from "@/src/lib/supabase/articles";
+import { getServerUserId } from "@/src/lib/supabase/server";
 import type { NewsItem } from "@/components/NewsCard";
 import type { FeedItem } from "@/src/lib/rss/fetchFeeds";
 import type { SummaryResult } from "@/src/lib/ai/types";
@@ -76,12 +77,13 @@ function toNewsItem(item: FeedItem): NewsItem {
 type Ctx = { params: Promise<{ id: string }> };
 
 export default async function CollectionDetailPage({ params }: Ctx) {
+  const userId = await getServerUserId();
   const { id } = await params;
 
-  const collection = await getCollectionById(id);
+  const collection = await getCollectionById(userId, id);
   if (!collection) notFound();
 
-  const articleIds = await getCollectionArticleIds(id);
+  const articleIds = await getCollectionArticleIds(userId, id);
   const articleMap = await getArticlesByIds(articleIds);
 
   // Preserve the order returned by getCollectionArticleIds (newest added first)

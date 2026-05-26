@@ -1,6 +1,5 @@
 import { supabase } from "./client";
 
-const USER_ID = "local-user";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,12 +35,12 @@ export const EVENT_WEIGHTS: Record<BehaviorEvent, number> = {
  * Appends one behavior event to user_behavior.
  * Fire-and-forget — never throws.
  */
-export async function logBehavior(
+export async function logBehavior(userId: string,
   articleId: string,
   event: BehaviorEvent
 ): Promise<void> {
   const { error } = await supabase.from("user_behavior").insert({
-    user_id:    USER_ID,
+    user_id:    userId,
     article_id: articleId,
     event,
   });
@@ -60,12 +59,12 @@ export async function logBehavior(
  * The join is done in two queries (Supabase JS doesn't support FK-based
  * select across tables without a view), and the result is merged client-side.
  */
-export async function getBehaviorHistory(limit = 500): Promise<BehaviorRow[]> {
+export async function getBehaviorHistory(userId: string, limit = 500): Promise<BehaviorRow[]> {
   // 1. Fetch behavior rows
   const { data: behaviorData, error: behaviorError } = await supabase
     .from("user_behavior")
     .select("article_id, event, created_at")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(limit);
 

@@ -1,6 +1,5 @@
 import { supabase } from "./client";
 
-const USER_ID = "local-user";
 const STALE_DAYS = 3;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,7 +41,7 @@ function ageLabel(ms: number): string {
 
 // ─── Query ────────────────────────────────────────────────────────────────────
 
-export async function getWorkloadData(): Promise<WorkloadData> {
+export async function getWorkloadData(userId: string): Promise<WorkloadData> {
   const empty: WorkloadData = {
     items: [], openCount: 0, criticalCount: 0, staleCount: 0,
     avgAgeLabel: "—", oldestItem: null, needsAttention: false,
@@ -52,7 +51,7 @@ export async function getWorkloadData(): Promise<WorkloadData> {
   const { data: rows, error } = await supabase
     .from("saved_articles")
     .select("article_id, updated_at")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .eq("status", "investigating")
     .order("updated_at", { ascending: true, nullsFirst: false });
 

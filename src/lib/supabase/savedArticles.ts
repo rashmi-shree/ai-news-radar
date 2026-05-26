@@ -19,19 +19,18 @@ export interface ActivityEntry {
   updatedAt:    string;
 }
 
-const USER_ID = "local-user";
 
 // ─── Read operations ──────────────────────────────────────────────────────────
 
 /** Returns the current status for a single article, or null if unsaved.
  *  Uses limit(1) + updated_at DESC so duplicate rows never cause an error. */
-export async function getArticleStatus(
+export async function getArticleStatus(userId: string,
   articleId: string
 ): Promise<WorkspaceStatus | null> {
   const { data, error } = await supabase
     .from("saved_articles")
     .select("status")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .eq("article_id", articleId)
     .order("updated_at", { ascending: false, nullsFirst: false })
     .limit(1);
@@ -42,7 +41,7 @@ export async function getArticleStatus(
 
 /** Returns per-status counts directly from saved_articles.
  *  Deduplicates first so each article is counted exactly once. */
-export async function getStatusCounts(): Promise<Record<WorkspaceStatus, number>> {
+export async function getStatusCounts(userId: string): Promise<Record<WorkspaceStatus, number>> {
   const zero: Record<WorkspaceStatus, number> = {
     saved: 0, investigating: 0, reviewed: 0, ignored: 0,
   };
@@ -50,7 +49,7 @@ export async function getStatusCounts(): Promise<Record<WorkspaceStatus, number>
   const { data, error } = await supabase
     .from("saved_articles")
     .select("article_id, status")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .order("updated_at", { ascending: false, nullsFirst: false });
 
   if (error || !data) return zero;
@@ -68,11 +67,11 @@ export async function getStatusCounts(): Promise<Record<WorkspaceStatus, number>
 
 /** Returns a Map<articleId, status> for all saved articles.
  *  If duplicate rows exist (legacy data), the most-recent row wins. */
-export async function getSavedStatuses(): Promise<Map<string, WorkspaceStatus>> {
+export async function getSavedStatuses(userId: string): Promise<Map<string, WorkspaceStatus>> {
   const { data, error } = await supabase
     .from("saved_articles")
     .select("article_id, status")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .order("updated_at", { ascending: false, nullsFirst: false });
 
   if (error) return new Map();
@@ -92,12 +91,12 @@ export async function getSavedStatuses(): Promise<Map<string, WorkspaceStatus>> 
  * Each row is the most-recent action for that article.
  * Article titles are fetched in a second query and joined in JS.
  */
-export async function getRecentActivity(): Promise<ActivityEntry[]> {
+export async function getRecentActivity(userId: string): Promise<ActivityEntry[]> {
   // 1. Fetch last 10 saved_articles rows (one per article after dedup)
   const { data: rows, error } = await supabase
     .from("saved_articles")
     .select("article_id, status, updated_at")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .order("updated_at", { ascending: false, nullsFirst: false })
     .limit(30); // fetch extra to account for dedup
 
@@ -140,11 +139,11 @@ export async function getRecentActivity(): Promise<ActivityEntry[]> {
 
 /** Returns all workspace entries (all statuses) ordered newest-first.
  *  Deduplicates by article_id — one article = one active status. */
-export async function getWorkspaceEntries(): Promise<WorkspaceEntry[]> {
+export async function getWorkspaceEntries(userId: string): Promise<WorkspaceEntry[]> {
   const { data, error } = await supabase
     .from("saved_articles")
     .select("id, article_id, status, notes, created_at, updated_at")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .order("updated_at", { ascending: false, nullsFirst: false });
 
   if (error) return [];
@@ -176,13 +175,13 @@ export async function getWorkspaceEntries(): Promise<WorkspaceEntry[]> {
 }
 
 /** Returns existing notes (and current status) for a single article. */
-export async function getArticleNotes(
+export async function getArticleNotes(userId: string,
   articleId: string
 ): Promise<{ notes: string | null; status: WorkspaceStatus | null }> {
   const { data, error } = await supabase
     .from("saved_articles")
     .select("notes, status")
-    .eq("user_id", USER_ID)
+    .eq("user_id", userId)
     .eq("article_id", articleId)
     .order("updated_at", { ascending: false, nullsFirst: false })
     .limit(1);

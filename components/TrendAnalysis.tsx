@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
 import { clsx } from "clsx";
 import { getTrendData, type PeriodTrend, type TrendMetric } from "@/src/lib/supabase/trendAnalysis";
@@ -133,15 +134,17 @@ function PeriodSkeleton() {
 // ─── Main section ─────────────────────────────────────────────────────────────
 
 export default function TrendAnalysis() {
+  const { userId } = useAuth();
   const [trends, setTrends]   = useState<PeriodTrend[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getTrendData().then((t) => {
+    if (!userId) return;
+    getTrendData(userId).then((t) => {
       setTrends(t);
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   return (
     <section className="mb-12">

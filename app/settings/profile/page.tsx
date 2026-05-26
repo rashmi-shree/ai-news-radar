@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import {
   Briefcase,
   Check,
@@ -216,6 +217,7 @@ function ProfileSkeleton() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
+  const { userId } = useAuth();
   const listId = useId();
 
   const [loading, setLoading] = useState(true);
@@ -240,7 +242,8 @@ export default function ProfilePage() {
 
   // ── Load existing profile ──
   useEffect(() => {
-    getUserProfile().then((profile) => {
+    if (!userId) return;
+    getUserProfile(userId).then((profile) => {
       if (profile) {
         setRole(profile.role);
         setCompany(profile.company);
@@ -251,7 +254,7 @@ export default function ProfilePage() {
       }
       setLoading(false);
     });
-  }, []);
+  }, [userId]);
 
   // ── Toggle helpers ──
   function toggleTool(tool: string) {
@@ -279,7 +282,8 @@ export default function ProfilePage() {
       favorite_topics: topics,
     };
 
-    const result = await saveUserProfile(profile);
+    if (!userId) return;
+    const result = await saveUserProfile(userId, profile);
 
     if (result.ok) {
       savedRef.current = JSON.stringify(profile);
