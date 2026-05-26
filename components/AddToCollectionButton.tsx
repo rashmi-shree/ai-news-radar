@@ -212,7 +212,7 @@ export default function AddToCollectionButton({ articleId }: { articleId: string
 
       {/* ── Popover ── */}
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 shadow-2xl shadow-black/60">
+        <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 shadow-2xl shadow-black/60">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2.5">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">

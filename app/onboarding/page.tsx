@@ -376,7 +376,7 @@ export default function OnboardingPage() {
               ))}
             </div>
 
-            <div className="mt-auto flex items-center justify-between border-t border-zinc-800 pt-6">
+            <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-6">
               <p className="text-sm text-zinc-500">
                 {selectedRole ? `Selected: ${selectedRole.label}` : "Choose your role to continue"}
               </p>
@@ -463,7 +463,7 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            <div className="mt-auto flex items-center justify-between border-t border-zinc-800 pt-6">
+            <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-6">
               <button
                 onClick={() => setStep("role")}
                 className="text-sm text-zinc-500 transition-colors hover:text-slate-300"
@@ -505,7 +505,7 @@ export default function OnboardingPage() {
               ))}
             </div>
 
-            <div className="mt-10 flex items-center justify-between border-t border-zinc-800 pt-6">
+            <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-6">
               <button
                 onClick={() => setStep("context")}
                 className="text-sm text-zinc-500 transition-colors hover:text-slate-300"
@@ -517,7 +517,7 @@ export default function OnboardingPage() {
                 {onboardingError && (
                   <p className="text-xs text-red-400">{onboardingError}</p>
                 )}
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="text-sm text-zinc-500">
                     {topics.size === 0
                       ? "Select at least one topic"

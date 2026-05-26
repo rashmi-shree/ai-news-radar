@@ -719,7 +719,7 @@ export default async function ArticlePage({
         )}
 
         {/* ── Footer ── */}
-        <div className="flex items-center justify-between border-t border-zinc-800 pt-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-6">
           <Link
             href="/feed"
             className="flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-slate-100"

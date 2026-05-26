@@ -26,8 +26,29 @@ export default function SettingsShell({ children }: { children: React.ReactNode 
            <p className="mt-1 text-sm text-zinc-500">Manage your builder profile and feed preferences.</p>
         </div>
 
+        {/* ── Mobile tab nav (above content on small screens) ── */}
+        <div className="mb-6 flex gap-2 sm:hidden">
+          {NAV_ITEMS.map(({ href, label }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={clsx(
+                  "rounded-lg border px-4 py-1.5 text-xs font-medium transition-colors",
+                  active
+                    ? "border-zinc-700 bg-zinc-800 text-slate-100"
+                    : "border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"
+                )}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+
         <div className="flex gap-8">
-          {/* ── Sidebar nav ── */}
+          {/* ── Sidebar nav (desktop) ── */}
           <nav className="hidden w-44 shrink-0 flex-col gap-1 sm:flex">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = pathname === href;
@@ -48,27 +69,6 @@ export default function SettingsShell({ children }: { children: React.ReactNode 
               );
             })}
           </nav>
-
-          {/* ── Mobile top nav (shows below h1 on small screens) ── */}
-          <div className="mb-6 flex gap-2 sm:hidden w-full">
-            {NAV_ITEMS.map(({ href, label }) => {
-              const active = pathname === href;
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={clsx(
-                    "rounded-lg border px-4 py-1.5 text-xs font-medium transition-colors",
-                    active
-                      ? "border-zinc-700 bg-zinc-800 text-slate-100"
-                      : "border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"
-                  )}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-          </div>
 
           {/* ── Page content ── */}
           <div className="min-w-0 flex-1 animate-page-enter">{children}</div>

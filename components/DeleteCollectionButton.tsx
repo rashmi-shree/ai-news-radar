@@ -18,7 +18,7 @@ export default function DeleteCollectionButton({ collectionId }: { collectionId:
 
   if (confirm) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-zinc-500">Delete collection?</span>
         <button
           onClick={handleDelete}

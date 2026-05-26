@@ -267,7 +267,7 @@ export default function ResearchPanel({ articleId, initialBrief }: {
                 Analysing the article across 5 dimensions
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               {["What Happened", "Why Builders Care", "Use Cases", "Risks", "Time to Learn"].map((label, i) => (
                 <span
                   key={label}

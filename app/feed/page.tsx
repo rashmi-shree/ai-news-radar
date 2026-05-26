@@ -467,7 +467,7 @@ export default function FeedPage() {
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
 
         {/* ── Page header ── */}
-        <div className="relative mb-4 flex items-center justify-between">
+        <div className="relative mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-100">Your feed</h1>
             <p className="mt-0.5 text-sm text-zinc-500">
@@ -479,7 +479,7 @@ export default function FeedPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {status === "success" && (
               <>
                 {/* ── Inject Test Article — dev only ── */}
@@ -550,7 +550,7 @@ export default function FeedPage() {
                 <>
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
                   <Wifi size={11} className="text-emerald-500" />
-                  <span className="text-xs font-semibold text-emerald-400">LIVE CONNECTED</span>
+                  <span className="text-xs font-semibold text-emerald-400"><span className="hidden sm:inline">LIVE </span>CONNECTED</span>
                 </>
               ) : realtimeStatus === "connecting" ? (
                 <>

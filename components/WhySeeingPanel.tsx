@@ -58,7 +58,7 @@ function ScoreBarRow({ bar }: { bar: ScoreBar }) {
   const pct = bar.max > 0 ? Math.min((bar.value / bar.max) * 100, 100) : 0;
   return (
     <div className="flex items-center gap-3">
-      <span className="w-36 shrink-0 text-[11px] text-zinc-500">{bar.label}</span>
+      <span className="w-24 shrink-0 text-[11px] text-zinc-500 sm:w-36">{bar.label}</span>
       <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
         <div
           className={clsx("absolute inset-y-0 left-0 rounded-full transition-all", bar.color)}

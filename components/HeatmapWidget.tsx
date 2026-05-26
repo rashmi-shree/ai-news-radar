@@ -290,7 +290,11 @@ export default function HeatmapWidget() {
            </div>
          ) : (
            <>
-             <HeatGrid data={data!} />
+             <div className="overflow-x-auto">
+               <div className="min-w-[540px]">
+                 <HeatGrid data={data!} />
+               </div>
+             </div>
              <IntensityLegend maxCount={data!.maxCount} />
            </>
          )}

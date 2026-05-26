@@ -184,9 +184,9 @@ function StatusDonutChart({ data }: { data: AnalyticsData["statusBreakdown"] }) 
           No tracked articles yet
         </div>
       ) : (
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center gap-4 sm:flex-row">
           {/* Donut */}
-          <ResponsiveContainer width="60%" height={180}>
+          <ResponsiveContainer width="100%" height={180} className="sm:w-[60%] sm:flex-none">
             <PieChart>
               <Pie
                 data={data}
