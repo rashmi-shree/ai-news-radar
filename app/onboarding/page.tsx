@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import {
@@ -22,11 +22,12 @@ import { type LucideIcon } from "lucide-react";
 import { clsx } from "clsx";
 import Header from "@/components/Header";
 import InterestCard from "@/components/InterestCard";
-import { saveInterests } from "@/src/lib/supabase/interests";
-import { saveUserProfile } from "@/src/lib/supabase/userProfile";
+import { getInterests, saveInterests } from "@/src/lib/supabase/interests";
+import { getUserProfile, saveUserProfile } from "@/src/lib/supabase/userProfile";
 import { saveUserPreferences, DEFAULT_PREFERENCES } from "@/src/lib/supabase/userPreferences";
 import { supabase } from "@/src/lib/supabase/client";
 import { logBehavior } from "@/src/lib/supabase/userBehavior";
+import { TOPIC_LABELS, LABEL_TO_TOPIC_ID } from "@/src/lib/personalization";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -284,6 +285,31 @@ export default function OnboardingPage() {
   const [progress, setProgress] = useState("Saving your preferences…");
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
 
+  // ── Pre-fill from existing DB data (returning users / trigger defaults) ──
+  useEffect(() => {
+    if (!userId) return;
+    const ONBOARDING_IDS = new Set(TOPICS.map((t) => t.id));
+
+    Promise.all([getUserProfile(userId), getInterests(userId)]).then(
+      ([profile, storedInterests]) => {
+        if (profile) {
+          const matchedRole = ROLES.find((r) => r.label === profile.role);
+          if (matchedRole) setSelectedRole(matchedRole);
+          if (profile.company) setCompany(profile.company);
+          if (profile.domain)  setDomain(profile.domain);
+          if (profile.tools?.length) setTools(profile.tools);
+        }
+        if (storedInterests.length > 0) {
+          // Stored interests may be labels ("MCP") or IDs ("mcp") — normalise to IDs
+          const ids = storedInterests
+            .map((t) => LABEL_TO_TOPIC_ID[t] ?? t)
+            .filter((id) => ONBOARDING_IDS.has(id));
+          if (ids.length > 0) setTopics(new Set(ids));
+        }
+      }
+    );
+  }, [userId]);
+
   function toggleTool(t: string) {
     setTools((prev) =>
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
@@ -302,18 +328,20 @@ export default function OnboardingPage() {
   async function finalize() {
     setStep("generating");
     setOnboardingError(null);
-    const topicList = [...topics];
+    const topicIds    = [...topics];
+    // Convert IDs → labels so DB storage is consistent with settings / trigger
+    const topicLabels = topicIds.map((id) => TOPIC_LABELS[id] ?? id);
 
     try {
-      // 1. Save to localStorage
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(topicList)); } catch { /* ignore */ }
+      // 1. Save to localStorage (keep IDs for legacy compat)
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(topicIds)); } catch { /* ignore */ }
 
       setProgress("Saving your profile…");
 
       const uid = userId ?? "";
 
-      // 2. Save user_interests
-      await saveInterests(uid, topicList).catch(console.error);
+      // 2. Save user_interests (labels so feed scorer works whether or not it normalises)
+      await saveInterests(uid, topicLabels).catch(console.error);
 
       // 3. Save user_profiles
       await saveUserProfile(uid, {
@@ -321,7 +349,7 @@ export default function OnboardingPage() {
         company:         company,
         domain:          domain,
         tools,
-        favorite_topics: topicList,
+        favorite_topics: topicLabels,
       }).catch(console.error);
 
       setProgress("Saving your preferences…");
@@ -329,14 +357,14 @@ export default function OnboardingPage() {
       // 4. Save user_preferences (topics + defaults)
       await saveUserPreferences(uid, {
         ...DEFAULT_PREFERENCES,
-        topics: topicList,
+        topics: topicLabels,
       }).catch(console.error);
 
       setProgress("Seeding your intelligence feed…");
 
-      // 5. Seed initial behavior signals for fast affinity warm-up
+      // 5. Seed initial behavior signals for fast affinity warm-up (use IDs)
       if (selectedRole) {
-        await seedInitialBehavior(uid, topicList, selectedRole).catch(console.error);
+        await seedInitialBehavior(uid, topicIds, selectedRole).catch(console.error);
       }
 
       setProgress("All done — loading your feed");

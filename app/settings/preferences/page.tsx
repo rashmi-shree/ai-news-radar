@@ -23,6 +23,7 @@ import {
   type DigestFrequency,
   type RiskThreshold,
 } from "@/src/lib/supabase/userPreferences";
+import { saveInterests } from "@/src/lib/supabase/interests";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -209,6 +210,8 @@ export default function PreferencesPage() {
     if (!userId) return;
     const result = await saveUserPreferences(userId, prefs);
     if (result.ok) {
+      // Keep user_interests in sync so feed personalisation reflects changes
+      await saveInterests(userId, prefs.topics).catch(console.error);
       savedRef.current = JSON.stringify(prefs);
       setSaveStatus("saved");
       addToast("Preferences saved", "success");

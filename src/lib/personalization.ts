@@ -2,6 +2,7 @@ import type { NewsItem } from "@/components/NewsCard";
 
 // ─── Topic metadata ────────────────────────────────────────────────────────────
 
+/** Maps topic ID → display label */
 export const TOPIC_LABELS: Record<string, string> = {
   "openai":          "OpenAI",
   "anthropic":       "Anthropic",
@@ -13,7 +14,27 @@ export const TOPIC_LABELS: Record<string, string> = {
   "benchmarks":      "Benchmarks",
   "tools":           "Tools",
   "security":        "Security",
+  // Extra topics used in settings / DB trigger defaults
+  "ai-agents":       "AI Agents",
+  "open-source":     "Open Source",
 };
+
+/**
+ * Maps display label → topic ID.
+ * Automatically derived from TOPIC_LABELS so the two maps stay in sync.
+ * Enables the feed scorer to accept either IDs ("mcp") or labels ("MCP").
+ */
+export const LABEL_TO_TOPIC_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(TOPIC_LABELS).map(([id, label]) => [label, id])
+);
+
+/**
+ * Normalises a topic string to its canonical ID.
+ * Accepts both IDs ("mcp") and labels ("MCP") from the database.
+ */
+export function normalizeTopic(topic: string): string {
+  return LABEL_TO_TOPIC_ID[topic] ?? topic;
+}
 
 /** Maps onboarding topic ID → article category string */
 const TOPIC_TO_CATEGORY: Record<string, string> = {
@@ -27,6 +48,8 @@ const TOPIC_TO_CATEGORY: Record<string, string> = {
   "benchmarks":      "Benchmarks",
   "tools":           "Tools",
   "security":        "Security",
+  "ai-agents":       "Coding Agents",  // closest category match
+  "open-source":     "GitHub Repos",   // closest category match
 };
 
 /** Keywords to match against title + summary for each topic */
@@ -41,10 +64,14 @@ export const TOPIC_KEYWORDS: Record<string, string[]> = {
   "benchmarks":      ["benchmark", "eval", "evaluation", "leaderboard", "mmlu", "humaneval", "swe-bench", "lmsys", "elo"],
   "tools":           ["api", "sdk", "framework", "library", "plugin", "integration", "release", "update", "open source"],
   "security":        ["security", "vulnerability", "exploit", "jailbreak", "prompt injection", "adversarial", "breach"],
+  "ai-agents":       ["agent framework", "autonomous agent", "agentic", "multi-agent", "langchain", "autogen", "crewai", "swarm", "agent loop"],
+  "open-source":     ["open source", "open-source", "oss", "community", "contributors", "fork", "mit license", "apache license"],
 };
 
 /** Topics where AI-adjacent content earns an extra overlap bonus */
-const AI_OVERLAP_TOPICS = new Set(["openai", "anthropic", "coding-agents", "research-papers"]);
+const AI_OVERLAP_TOPICS = new Set([
+  "openai", "anthropic", "coding-agents", "research-papers", "ai-agents",
+]);
 
 // ─── Scoring ───────────────────────────────────────────────────────────────────
 
@@ -57,7 +84,10 @@ export function computePersonalScore(
   const haystack = `${item.title} ${item.summary}`.toLowerCase();
   let score = 0;
 
-  for (const topic of interests) {
+  for (const rawTopic of interests) {
+    // Accept both IDs and labels from the database
+    const topic = LABEL_TO_TOPIC_ID[rawTopic] ?? rawTopic;
+
     // +3 exact category match
     if (TOPIC_TO_CATEGORY[topic] === item.category) {
       score += 3;
@@ -96,8 +126,10 @@ export function getMatchedInterestTopics(
   const haystack = `${item.title} ${item.summary}`.toLowerCase();
   const matched: string[] = [];
 
-  for (const topic of interests) {
-    const label    = TOPIC_TO_CATEGORY[topic] ?? topic;
+  for (const rawTopic of interests) {
+    // Accept both IDs and labels
+    const topic   = LABEL_TO_TOPIC_ID[rawTopic] ?? rawTopic;
+    const label   = TOPIC_LABELS[topic] ?? rawTopic;
     const keywords = TOPIC_KEYWORDS[topic] ?? [];
 
     const categoryHit = TOPIC_TO_CATEGORY[topic] === item.category;
@@ -123,7 +155,7 @@ const SIGNAL_ORDER: Record<string, number> = {
   "General": 2,
 };
 
-function sortPersonalized<T extends NewsItem>(
+export function sortPersonalized<T extends NewsItem>(
   items: T[],
   personalScores: Map<string, number>
 ): T[] {
